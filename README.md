@@ -10,6 +10,30 @@
 
 ---
 
+## 目錄
+
+- [專案概述](#專案概述)
+- [架構設計圖](#架構設計圖)
+  - [六角形架構圖](#六角形架構圖)
+  - [系統元件圖](#系統元件圖)
+  - [CQRS 架構圖](#cqrs-架構圖)
+- [類別圖](#類別圖)
+  - [領域層類別圖](#領域層類別圖)
+  - [應用層類別圖](#應用層類別圖)
+  - [基礎設施層類別圖](#基礎設施層類別圖)
+- [時序圖](#時序圖)
+  - [新增保戶時序圖](#新增保戶時序圖)
+  - [查詢保戶時序圖](#查詢保戶時序圖)
+  - [新增保單時序圖](#新增保單時序圖)
+  - [刪除保戶時序圖](#刪除保戶時序圖)
+- [ER Diagram](#er-diagram)
+- [狀態圖](#狀態圖)
+- [專案結構](#專案結構)
+- [API 端點](#api-端點)
+- [快速開始](#快速開始)
+
+---
+
 ## 專案概述
 
 本系統是一個基於 **Domain-Driven Design (DDD)** 設計的企業級應用程式，採用 **六角形架構 (Hexagonal Architecture)** 與 **CQRS Level 2** 模式，提供符合 **OpenAPI 3.0** 規範的 RESTful API。
@@ -38,56 +62,905 @@
 
 ---
 
-## 架構設計
+## 架構設計圖
 
-### 架構層級圖
+### 六角形架構圖
 
+```mermaid
+graph TB
+    subgraph External["外部世界"]
+        Client["🖥️ Client<br/>(REST API)"]
+        DB["🗄️ H2 Database"]
+        EventBus["📨 Event Bus"]
+    end
+
+    subgraph Infrastructure["Infrastructure Layer (基礎設施層)"]
+        subgraph InputAdapters["Input Adapters (輸入適配器)"]
+            RestController["REST Controller<br/>PolicyHolderController"]
+        end
+
+        subgraph OutputAdapters["Output Adapters (輸出適配器)"]
+            RepoAdapter["Repository Adapter<br/>PolicyHolderRepositoryAdapter"]
+            EventAdapter["Event Adapter<br/>DomainEventPublisherAdapter"]
+        end
+    end
+
+    subgraph Application["Application Layer (應用層)"]
+        subgraph InputPorts["Input Ports (輸入端口)"]
+            CmdHandler["Command Handlers"]
+            QryHandler["Query Handlers"]
+        end
+
+        subgraph OutputPorts["Output Ports (輸出端口)"]
+            RepoPort["PolicyHolderRepository<br/><<interface>>"]
+            EventPort["DomainEventPublisher<br/><<interface>>"]
+        end
+    end
+
+    subgraph Domain["Domain Layer (領域層)"]
+        Aggregate["PolicyHolder<br/>(Aggregate Root)"]
+        Entity["Policy<br/>(Entity)"]
+        ValueObj["Value Objects<br/>Address, Money, etc."]
+        DomainEvent["Domain Events"]
+    end
+
+    Client --> RestController
+    RestController --> CmdHandler
+    RestController --> QryHandler
+
+    CmdHandler --> Aggregate
+    QryHandler --> RepoPort
+    Aggregate --> DomainEvent
+
+    CmdHandler --> RepoPort
+    CmdHandler --> EventPort
+
+    RepoPort -.->|implements| RepoAdapter
+    EventPort -.->|implements| EventAdapter
+
+    RepoAdapter --> DB
+    EventAdapter --> EventBus
+
+    style Domain fill:#e1f5fe
+    style Application fill:#fff3e0
+    style Infrastructure fill:#fce4ec
+    style External fill:#f5f5f5
 ```
-┌────────────────────────────────────────────────────────────────────┐
-│                     Infrastructure Layer                            │
-│  ┌──────────────┐  ┌──────────────┐  ┌──────────────────────────┐  │
-│  │  REST API    │  │  H2 / JPA    │  │     Event Store          │  │
-│  │  (Adapter)   │  │  (Adapter)   │  │     (Adapter)            │  │
-│  └───────┬──────┘  └───────┬──────┘  └────────────┬─────────────┘  │
-└──────────┼─────────────────┼──────────────────────┼────────────────┘
-           │                 │                      │
-           ▼                 ▼                      ▼
-┌──────────────────────────────────────────────────────────────────┐
-│                     Application Layer                             │
-│  ┌─────────────────────┐    ┌─────────────────────────────────┐  │
-│  │   Command Handlers  │    │       Query Handlers            │  │
-│  │   (Write Side)      │    │       (Read Side)               │  │
-│  └──────────┬──────────┘    └───────────────┬─────────────────┘  │
-└─────────────┼───────────────────────────────┼────────────────────┘
-              │                               │
-              ▼                               ▼
-┌──────────────────────────────────────────────────────────────────┐
-│                       Domain Layer                                │
-│  ┌────────────────────────────────────────────────────────────┐  │
-│  │               PolicyHolder (Aggregate Root)                 │  │
-│  │  ┌─────────────┐  ┌─────────────┐  ┌────────────────────┐  │  │
-│  │  │   Policy    │  │   Address   │  │   Domain Events    │  │  │
-│  │  │  (Entity)   │  │ (Value Obj) │  │                    │  │  │
-│  │  └─────────────┘  └─────────────┘  └────────────────────┘  │  │
-│  └────────────────────────────────────────────────────────────┘  │
-└──────────────────────────────────────────────────────────────────┘
+
+### 系統元件圖
+
+```mermaid
+graph LR
+    subgraph Presentation["展示層"]
+        API["REST API<br/>/api/v1/policyholders"]
+        Swagger["Swagger UI<br/>/swagger-ui.html"]
+    end
+
+    subgraph Application["應用層"]
+        subgraph Commands["Commands (寫入)"]
+            CreateCmd["CreatePolicyHolder"]
+            UpdateCmd["UpdatePolicyHolder"]
+            DeleteCmd["DeletePolicyHolder"]
+            AddPolicyCmd["AddPolicy"]
+        end
+
+        subgraph Queries["Queries (讀取)"]
+            GetByIdQry["GetPolicyHolder"]
+            SearchQry["SearchPolicyHolders"]
+            GetPoliciesQry["GetPolicies"]
+        end
+    end
+
+    subgraph Domain["領域層"]
+        PHAggregate["PolicyHolder<br/>Aggregate"]
+        PolicyEntity["Policy<br/>Entity"]
+        Events["Domain Events"]
+    end
+
+    subgraph Persistence["持久層"]
+        JPA["JPA Entities"]
+        H2["H2 Database"]
+        EventStore["Event Store"]
+    end
+
+    API --> Commands
+    API --> Queries
+    Swagger --> API
+
+    Commands --> PHAggregate
+    PHAggregate --> PolicyEntity
+    PHAggregate --> Events
+
+    Queries --> JPA
+    Commands --> JPA
+    Events --> EventStore
+
+    JPA --> H2
+    EventStore --> H2
+
+    style Presentation fill:#c8e6c9
+    style Application fill:#fff9c4
+    style Domain fill:#bbdefb
+    style Persistence fill:#ffccbc
 ```
 
-### 依賴規則
+### CQRS 架構圖
 
-```
-Infrastructure ──depends on──► Application ──depends on──► Domain
-     │                              │                         │
-     │                              │                         │
-     ▼                              ▼                         ▼
- 實作 Port                      定義 Port                   純領域邏輯
- (Adapter)                     (Interface)                 (無外部依賴)
+```mermaid
+graph TB
+    subgraph Client["客戶端"]
+        Request["HTTP Request"]
+    end
+
+    subgraph WriteModel["Command Side (寫入端)"]
+        WController["Controller"]
+        CmdHandler["Command Handler"]
+        Aggregate["PolicyHolder<br/>Aggregate"]
+        WriteRepo["Repository<br/>(Write)"]
+        EventPublisher["Event Publisher"]
+    end
+
+    subgraph ReadModel["Query Side (讀取端)"]
+        RController["Controller"]
+        QryHandler["Query Handler"]
+        ReadModel2["Read Model<br/>(DTO)"]
+        QueryRepo["Query Repository<br/>(Read)"]
+    end
+
+    subgraph Storage["儲存層"]
+        Database[("H2 Database")]
+        EventStore[("Event Store")]
+    end
+
+    Request -->|POST/PUT/DELETE| WController
+    Request -->|GET| RController
+
+    WController --> CmdHandler
+    CmdHandler --> Aggregate
+    Aggregate -->|save| WriteRepo
+    Aggregate -->|publish| EventPublisher
+    WriteRepo --> Database
+    EventPublisher --> EventStore
+
+    RController --> QryHandler
+    QryHandler --> ReadModel2
+    QueryRepo --> ReadModel2
+    QueryRepo --> Database
+
+    style WriteModel fill:#ffcdd2
+    style ReadModel fill:#c8e6c9
+    style Storage fill:#e1f5fe
 ```
 
-**重要原則**：
-- ✅ 外層可以依賴內層
-- ❌ 內層不可依賴外層
-- 內層透過 Port（Interface）與外層溝通
+---
+
+## 類別圖
+
+### 領域層類別圖
+
+```mermaid
+classDiagram
+    class PolicyHolder {
+        <<Aggregate Root>>
+        -PolicyHolderId id
+        -NationalId nationalId
+        -PersonalInfo personalInfo
+        -ContactInfo contactInfo
+        -Address address
+        -PolicyHolderStatus status
+        -List~Policy~ policies
+        -List~DomainEvent~ domainEvents
+        -Long version
+        +create(NationalId, PersonalInfo, ContactInfo, Address) PolicyHolder
+        +updateContactInfo(ContactInfo) void
+        +updateAddress(Address) void
+        +addPolicy(Policy) void
+        +deactivate() void
+        +isActive() boolean
+        +getDomainEvents() List~DomainEvent~
+    }
+
+    class Policy {
+        <<Entity>>
+        -PolicyId id
+        -PolicyType policyType
+        -Money premium
+        -Money sumInsured
+        -LocalDate startDate
+        -LocalDate endDate
+        -PolicyStatus status
+        +create(PolicyType, Money, Money, LocalDate, LocalDate) Policy
+        +isValidPeriod() boolean
+        +isActive() boolean
+    }
+
+    class PolicyHolderId {
+        <<Value Object>>
+        -String value
+        +generate() PolicyHolderId
+        +of(String) PolicyHolderId
+        +getValue() String
+    }
+
+    class NationalId {
+        <<Value Object>>
+        -String value
+        +of(String) NationalId
+        +validate(String) boolean
+        +getValue() String
+    }
+
+    class PersonalInfo {
+        <<Value Object>>
+        -String name
+        -Gender gender
+        -LocalDate birthDate
+        +of(String, Gender, LocalDate) PersonalInfo
+        +getAge() int
+    }
+
+    class ContactInfo {
+        <<Value Object>>
+        -String mobilePhone
+        -String email
+        +of(String, String) ContactInfo
+    }
+
+    class Address {
+        <<Value Object>>
+        -String zipCode
+        -String city
+        -String district
+        -String street
+        +of(String, String, String, String) Address
+        +getFullAddress() String
+    }
+
+    class Money {
+        <<Value Object>>
+        -BigDecimal amount
+        -String currency
+        +of(BigDecimal) Money
+        +twd(long) Money
+        +add(Money) Money
+        +getAmount() BigDecimal
+    }
+
+    class PolicyHolderStatus {
+        <<Enumeration>>
+        ACTIVE
+        INACTIVE
+        SUSPENDED
+    }
+
+    class PolicyType {
+        <<Enumeration>>
+        LIFE
+        HEALTH
+        ACCIDENT
+        TRAVEL
+        PROPERTY
+        AUTO
+        SAFETY
+    }
+
+    class PolicyStatus {
+        <<Enumeration>>
+        ACTIVE
+        EXPIRED
+        CANCELLED
+    }
+
+    class DomainEvent {
+        <<Abstract>>
+        -String eventId
+        -String aggregateId
+        -LocalDateTime occurredOn
+        +getEventType() String
+    }
+
+    class PolicyHolderCreated {
+        -PolicyHolderSnapshot snapshot
+    }
+
+    class PolicyHolderUpdated {
+        -PolicyHolderSnapshot before
+        -PolicyHolderSnapshot after
+    }
+
+    class PolicyAdded {
+        -String policyHolderId
+        -PolicySnapshot policySnapshot
+    }
+
+    PolicyHolder "1" *-- "0..*" Policy : contains
+    PolicyHolder *-- PolicyHolderId
+    PolicyHolder *-- NationalId
+    PolicyHolder *-- PersonalInfo
+    PolicyHolder *-- ContactInfo
+    PolicyHolder *-- Address
+    PolicyHolder *-- PolicyHolderStatus
+    PolicyHolder o-- DomainEvent
+
+    Policy *-- PolicyId
+    Policy *-- PolicyType
+    Policy *-- PolicyStatus
+    Policy *-- Money
+
+    PersonalInfo *-- Gender
+
+    DomainEvent <|-- PolicyHolderCreated
+    DomainEvent <|-- PolicyHolderUpdated
+    DomainEvent <|-- PolicyAdded
+```
+
+### 應用層類別圖
+
+```mermaid
+classDiagram
+    class CommandHandler~C, R~ {
+        <<Interface>>
+        +handle(C command) R
+    }
+
+    class QueryHandler~Q, R~ {
+        <<Interface>>
+        +handle(Q query) R
+    }
+
+    class CreatePolicyHolderCommandHandler {
+        -PolicyHolderRepository repository
+        -DomainEventPublisher eventPublisher
+        +handle(CreatePolicyHolderCommand) PolicyHolderReadModel
+    }
+
+    class UpdatePolicyHolderCommandHandler {
+        -PolicyHolderRepository repository
+        -DomainEventPublisher eventPublisher
+        +handle(UpdatePolicyHolderCommand) PolicyHolderReadModel
+    }
+
+    class DeletePolicyHolderCommandHandler {
+        -PolicyHolderRepository repository
+        -DomainEventPublisher eventPublisher
+        +handle(DeletePolicyHolderCommand) void
+    }
+
+    class AddPolicyCommandHandler {
+        -PolicyHolderRepository repository
+        -DomainEventPublisher eventPublisher
+        +handle(AddPolicyCommand) PolicyReadModel
+    }
+
+    class GetPolicyHolderQueryHandler {
+        -PolicyHolderRepository repository
+        +handle(GetPolicyHolderQuery) PolicyHolderReadModel
+    }
+
+    class SearchPolicyHoldersQueryHandler {
+        -PolicyHolderQueryRepository queryRepository
+        +handle(SearchPolicyHoldersQuery) PagedResult
+    }
+
+    class CreatePolicyHolderCommand {
+        -String nationalId
+        -String name
+        -String gender
+        -LocalDate birthDate
+        -String mobilePhone
+        -String email
+        -AddressData address
+    }
+
+    class UpdatePolicyHolderCommand {
+        -String policyHolderId
+        -String mobilePhone
+        -String email
+        -AddressData address
+    }
+
+    class AddPolicyCommand {
+        -String policyHolderId
+        -String policyType
+        -BigDecimal premium
+        -BigDecimal sumInsured
+        -LocalDate startDate
+        -LocalDate endDate
+    }
+
+    class PolicyHolderReadModel {
+        -String id
+        -String nationalId
+        -String name
+        -String gender
+        -LocalDate birthDate
+        -String mobilePhone
+        -String email
+        -AddressReadModel address
+        -String status
+    }
+
+    class PolicyReadModel {
+        -String id
+        -String policyHolderId
+        -String policyType
+        -BigDecimal premium
+        -BigDecimal sumInsured
+        -LocalDate startDate
+        -LocalDate endDate
+        -String status
+    }
+
+    class PolicyHolderRepository {
+        <<Interface>>
+        +save(PolicyHolder) PolicyHolder
+        +findById(PolicyHolderId) Optional~PolicyHolder~
+        +findByNationalId(NationalId) Optional~PolicyHolder~
+        +existsByNationalId(NationalId) boolean
+    }
+
+    class PolicyHolderQueryRepository {
+        <<Interface>>
+        +findAll(Pageable) Page~PolicyHolderListItemReadModel~
+        +searchByName(String, Pageable) Page~PolicyHolderListItemReadModel~
+        +findByStatus(String, Pageable) Page~PolicyHolderListItemReadModel~
+    }
+
+    class DomainEventPublisher {
+        <<Interface>>
+        +publish(DomainEvent) void
+        +publishAll(List~DomainEvent~) void
+    }
+
+    CommandHandler <|.. CreatePolicyHolderCommandHandler
+    CommandHandler <|.. UpdatePolicyHolderCommandHandler
+    CommandHandler <|.. DeletePolicyHolderCommandHandler
+    CommandHandler <|.. AddPolicyCommandHandler
+
+    QueryHandler <|.. GetPolicyHolderQueryHandler
+    QueryHandler <|.. SearchPolicyHoldersQueryHandler
+
+    CreatePolicyHolderCommandHandler ..> PolicyHolderRepository
+    CreatePolicyHolderCommandHandler ..> DomainEventPublisher
+    CreatePolicyHolderCommandHandler ..> CreatePolicyHolderCommand
+    CreatePolicyHolderCommandHandler ..> PolicyHolderReadModel
+
+    GetPolicyHolderQueryHandler ..> PolicyHolderRepository
+    SearchPolicyHoldersQueryHandler ..> PolicyHolderQueryRepository
+```
+
+### 基礎設施層類別圖
+
+```mermaid
+classDiagram
+    class PolicyHolderController {
+        -CreatePolicyHolderCommandHandler createHandler
+        -UpdatePolicyHolderCommandHandler updateHandler
+        -DeletePolicyHolderCommandHandler deleteHandler
+        -AddPolicyCommandHandler addPolicyHandler
+        -GetPolicyHolderQueryHandler getHandler
+        -SearchPolicyHoldersQueryHandler searchHandler
+        +createPolicyHolder(CreatePolicyHolderRequest) ResponseEntity
+        +getPolicyHolder(String) ResponseEntity
+        +updatePolicyHolder(String, UpdatePolicyHolderRequest) ResponseEntity
+        +deletePolicyHolder(String) ResponseEntity
+        +addPolicy(String, AddPolicyRequest) ResponseEntity
+        +getPolicies(String, String, String) ResponseEntity
+    }
+
+    class PolicyHolderRepositoryAdapter {
+        -PolicyHolderJpaRepository jpaRepository
+        -PolicyHolderMapper mapper
+        +save(PolicyHolder) PolicyHolder
+        +findById(PolicyHolderId) Optional~PolicyHolder~
+        +findByNationalId(NationalId) Optional~PolicyHolder~
+    }
+
+    class PolicyHolderQueryRepositoryAdapter {
+        -PolicyHolderJpaRepository jpaRepository
+        +findAll(Pageable) Page~PolicyHolderListItemReadModel~
+        +searchByName(String, Pageable) Page~PolicyHolderListItemReadModel~
+    }
+
+    class DomainEventPublisherAdapter {
+        -EventStore eventStore
+        -ApplicationEventPublisher springPublisher
+        +publish(DomainEvent) void
+        +publishAll(List~DomainEvent~) void
+    }
+
+    class PolicyHolderJpaEntity {
+        -String id
+        -String nationalId
+        -String name
+        -Gender gender
+        -LocalDate birthDate
+        -String mobilePhone
+        -String email
+        -String zipCode
+        -String city
+        -String district
+        -String street
+        -PolicyHolderStatus status
+        -LocalDateTime createdAt
+        -LocalDateTime updatedAt
+        -Long version
+        -List~PolicyJpaEntity~ policies
+    }
+
+    class PolicyJpaEntity {
+        -String id
+        -String policyHolderId
+        -PolicyType policyType
+        -BigDecimal premiumAmount
+        -BigDecimal sumInsured
+        -LocalDate startDate
+        -LocalDate endDate
+        -PolicyStatus status
+        -LocalDateTime createdAt
+        -LocalDateTime updatedAt
+    }
+
+    class DomainEventJpaEntity {
+        -String eventId
+        -String aggregateId
+        -String aggregateType
+        -String eventType
+        -String eventData
+        -LocalDateTime occurredOn
+        -boolean published
+        -LocalDateTime publishedAt
+    }
+
+    class PolicyHolderJpaRepository {
+        <<Interface>>
+        +findByNationalId(String) Optional~PolicyHolderJpaEntity~
+        +existsByNationalId(String) boolean
+        +findByNameContaining(String, Pageable) Page~PolicyHolderJpaEntity~
+    }
+
+    class GlobalExceptionHandler {
+        +handlePolicyHolderNotFoundException(Exception) ResponseEntity
+        +handleValidationException(Exception) ResponseEntity
+        +handleGenericException(Exception) ResponseEntity
+    }
+
+    PolicyHolderController ..> CreatePolicyHolderCommandHandler
+    PolicyHolderController ..> GetPolicyHolderQueryHandler
+
+    PolicyHolderRepositoryAdapter ..|> PolicyHolderRepository
+    PolicyHolderRepositoryAdapter ..> PolicyHolderJpaRepository
+    PolicyHolderRepositoryAdapter ..> PolicyHolderMapper
+
+    PolicyHolderQueryRepositoryAdapter ..|> PolicyHolderQueryRepository
+
+    DomainEventPublisherAdapter ..|> DomainEventPublisher
+
+    PolicyHolderJpaEntity "1" *-- "0..*" PolicyJpaEntity
+
+    PolicyHolderJpaRepository ..> PolicyHolderJpaEntity
+```
+
+---
+
+## 時序圖
+
+### 新增保戶時序圖
+
+```mermaid
+sequenceDiagram
+    autonumber
+    actor Client
+    participant Controller as PolicyHolderController
+    participant Handler as CreatePolicyHolderCommandHandler
+    participant Aggregate as PolicyHolder
+    participant Repo as PolicyHolderRepository
+    participant EventPub as DomainEventPublisher
+    participant DB as Database
+
+    Client->>+Controller: POST /api/v1/policyholders
+    Controller->>Controller: Validate Request
+    Controller->>+Handler: handle(CreatePolicyHolderCommand)
+
+    Handler->>Repo: existsByNationalId(nationalId)
+    Repo->>DB: SELECT COUNT(*)
+    DB-->>Repo: count
+    Repo-->>Handler: false
+
+    Handler->>+Aggregate: create(nationalId, personalInfo, contactInfo, address)
+    Aggregate->>Aggregate: Generate PolicyHolderId
+    Aggregate->>Aggregate: Validate business rules
+    Aggregate->>Aggregate: Register PolicyHolderCreated event
+    Aggregate-->>-Handler: PolicyHolder
+
+    Handler->>+Repo: save(policyHolder)
+    Repo->>DB: INSERT INTO policy_holders
+    DB-->>Repo: success
+    Repo-->>-Handler: savedPolicyHolder
+
+    Handler->>Aggregate: getDomainEvents()
+    Aggregate-->>Handler: List<DomainEvent>
+
+    Handler->>+EventPub: publishAll(events)
+    EventPub->>DB: INSERT INTO domain_events
+    EventPub-->>-Handler: void
+
+    Handler->>Handler: Map to PolicyHolderReadModel
+    Handler-->>-Controller: PolicyHolderReadModel
+
+    Controller-->>-Client: 201 Created + PolicyHolderResponse
+```
+
+### 查詢保戶時序圖
+
+```mermaid
+sequenceDiagram
+    autonumber
+    actor Client
+    participant Controller as PolicyHolderController
+    participant Handler as GetPolicyHolderQueryHandler
+    participant Repo as PolicyHolderRepository
+    participant Mapper as PolicyHolderMapper
+    participant DB as Database
+
+    Client->>+Controller: GET /api/v1/policyholders/{id}
+    Controller->>+Handler: handle(GetPolicyHolderQuery)
+
+    Handler->>+Repo: findById(policyHolderId)
+    Repo->>+DB: SELECT * FROM policy_holders WHERE id = ?
+    DB-->>-Repo: PolicyHolderJpaEntity
+    Repo->>+Mapper: toDomain(entity)
+    Mapper-->>-Repo: PolicyHolder
+    Repo-->>-Handler: Optional<PolicyHolder>
+
+    alt PolicyHolder found
+        Handler->>Handler: Map to PolicyHolderReadModel
+        Handler-->>Controller: PolicyHolderReadModel
+        Controller-->>Client: 200 OK + PolicyHolderResponse
+    else PolicyHolder not found
+        Handler-->>Controller: throw PolicyHolderNotFoundException
+        Controller-->>Client: 404 Not Found + ErrorResponse
+    end
+
+    deactivate Handler
+    deactivate Controller
+```
+
+### 新增保單時序圖
+
+```mermaid
+sequenceDiagram
+    autonumber
+    actor Client
+    participant Controller as PolicyHolderController
+    participant Handler as AddPolicyCommandHandler
+    participant Repo as PolicyHolderRepository
+    participant Aggregate as PolicyHolder
+    participant Policy as Policy
+    participant EventPub as DomainEventPublisher
+    participant DB as Database
+
+    Client->>+Controller: POST /api/v1/policyholders/{id}/policies
+    Controller->>Controller: Validate Request
+    Controller->>+Handler: handle(AddPolicyCommand)
+
+    Handler->>+Repo: findById(policyHolderId)
+    Repo->>DB: SELECT * FROM policy_holders
+    DB-->>Repo: entity
+    Repo-->>-Handler: Optional<PolicyHolder>
+
+    alt PolicyHolder not found
+        Handler-->>Controller: throw PolicyHolderNotFoundException
+        Controller-->>Client: 404 Not Found
+    end
+
+    Handler->>+Aggregate: isActive()
+    Aggregate-->>-Handler: true/false
+
+    alt PolicyHolder not active
+        Handler-->>Controller: throw PolicyHolderNotActiveException
+        Controller-->>Client: 400 Bad Request
+    end
+
+    Handler->>+Policy: create(type, premium, sumInsured, startDate, endDate)
+    Policy->>Policy: Generate PolicyId
+    Policy->>Policy: Validate dates
+    Policy-->>-Handler: Policy
+
+    Handler->>+Aggregate: addPolicy(policy)
+    Aggregate->>Aggregate: Add to policies list
+    Aggregate->>Aggregate: Register PolicyAdded event
+    Aggregate-->>-Handler: void
+
+    Handler->>+Repo: save(policyHolder)
+    Repo->>DB: UPDATE policy_holders + INSERT policies
+    Repo-->>-Handler: savedPolicyHolder
+
+    Handler->>+EventPub: publishAll(events)
+    EventPub->>DB: INSERT INTO domain_events
+    EventPub-->>-Handler: void
+
+    Handler-->>-Controller: PolicyReadModel
+    Controller-->>-Client: 201 Created + PolicyResponse
+```
+
+### 刪除保戶時序圖
+
+```mermaid
+sequenceDiagram
+    autonumber
+    actor Client
+    participant Controller as PolicyHolderController
+    participant Handler as DeletePolicyHolderCommandHandler
+    participant Repo as PolicyHolderRepository
+    participant Aggregate as PolicyHolder
+    participant EventPub as DomainEventPublisher
+    participant DB as Database
+
+    Client->>+Controller: DELETE /api/v1/policyholders/{id}
+    Controller->>+Handler: handle(DeletePolicyHolderCommand)
+
+    Handler->>+Repo: findById(policyHolderId)
+    Repo->>DB: SELECT * FROM policy_holders
+    DB-->>Repo: entity
+    Repo-->>-Handler: Optional<PolicyHolder>
+
+    alt PolicyHolder not found
+        Handler-->>Controller: throw PolicyHolderNotFoundException
+        Controller-->>Client: 404 Not Found
+    end
+
+    Handler->>+Aggregate: isActive()
+    Aggregate-->>-Handler: true/false
+
+    alt Already inactive
+        Handler-->>Controller: throw IllegalStateException
+        Controller-->>Client: 400 Bad Request
+    end
+
+    Handler->>+Aggregate: deactivate()
+    Aggregate->>Aggregate: Set status = INACTIVE
+    Aggregate->>Aggregate: Register PolicyHolderDeleted event
+    Aggregate-->>-Handler: void
+
+    Handler->>+Repo: save(policyHolder)
+    Repo->>DB: UPDATE policy_holders SET status = 'INACTIVE'
+    Repo-->>-Handler: savedPolicyHolder
+
+    Handler->>+EventPub: publishAll(events)
+    EventPub->>DB: INSERT INTO domain_events
+    EventPub-->>-Handler: void
+
+    Handler-->>-Controller: void
+    Controller-->>-Client: 204 No Content
+
+    Note over DB: 軟刪除：資料保留，狀態改為 INACTIVE
+```
+
+---
+
+## ER Diagram
+
+```mermaid
+erDiagram
+    POLICY_HOLDERS {
+        varchar(13) id PK "保戶編號 (PH + 10位數字)"
+        varchar(10) national_id UK "身分證字號"
+        varchar(50) name "姓名"
+        varchar(10) gender "性別 (MALE/FEMALE)"
+        date birth_date "出生日期"
+        varchar(10) mobile_phone "手機號碼"
+        varchar(100) email "電子郵件"
+        varchar(5) zip_code "郵遞區號"
+        varchar(10) city "縣市"
+        varchar(10) district "區域"
+        varchar(100) street "街道地址"
+        varchar(20) status "狀態 (ACTIVE/INACTIVE/SUSPENDED)"
+        timestamp created_at "建立時間"
+        timestamp updated_at "更新時間"
+        bigint version "樂觀鎖版本"
+    }
+
+    POLICIES {
+        varchar(12) id PK "保單編號 (PO + 10位數字)"
+        varchar(13) policy_holder_id FK "保戶編號"
+        varchar(20) policy_type "保單類型"
+        decimal(15-2) premium_amount "保費金額"
+        decimal(15-2) sum_insured "保險金額"
+        date start_date "生效日期"
+        date end_date "到期日期"
+        varchar(20) status "狀態 (ACTIVE/EXPIRED/CANCELLED)"
+        timestamp created_at "建立時間"
+        timestamp updated_at "更新時間"
+    }
+
+    DOMAIN_EVENTS {
+        varchar(36) event_id PK "事件 ID (UUID)"
+        varchar(50) aggregate_id "聚合 ID"
+        varchar(50) aggregate_type "聚合類型"
+        varchar(100) event_type "事件類型"
+        clob event_data "事件資料 (JSON)"
+        timestamp occurred_on "發生時間"
+        boolean published "是否已發布"
+        timestamp published_at "發布時間"
+    }
+
+    POLICY_HOLDERS ||--o{ POLICIES : "has"
+    POLICY_HOLDERS ||--o{ DOMAIN_EVENTS : "generates"
+```
+
+---
+
+## 狀態圖
+
+### 保戶狀態轉換
+
+```mermaid
+stateDiagram-v2
+    [*] --> ACTIVE: 新增保戶
+
+    ACTIVE --> ACTIVE: 修改資料
+    ACTIVE --> INACTIVE: 軟刪除
+    ACTIVE --> SUSPENDED: 停權處理
+
+    SUSPENDED --> ACTIVE: 解除停權
+    SUSPENDED --> INACTIVE: 軟刪除
+
+    INACTIVE --> [*]: 資料保留但不可操作
+
+    note right of ACTIVE
+        可執行：
+        - 修改聯絡資訊
+        - 修改地址
+        - 新增保單
+        - 查詢保單
+    end note
+
+    note right of SUSPENDED
+        禁止：
+        - 所有修改操作
+        - 新增保單
+        允許：
+        - 查詢操作
+    end note
+
+    note right of INACTIVE
+        軟刪除狀態
+        資料保留於資料庫
+        禁止所有操作
+    end note
+```
+
+### 保單狀態轉換
+
+```mermaid
+stateDiagram-v2
+    [*] --> ACTIVE: 新增保單
+
+    ACTIVE --> EXPIRED: 到期日到達
+    ACTIVE --> CANCELLED: 解約/終止
+
+    EXPIRED --> [*]: 保單結束
+    CANCELLED --> [*]: 保單結束
+
+    note right of ACTIVE
+        有效保單
+        - 在保障期間內
+        - 可查詢保單資訊
+    end note
+
+    note right of EXPIRED
+        已到期保單
+        - 超過到期日
+        - 保障已結束
+    end note
+
+    note right of CANCELLED
+        已取消保單
+        - 主動解約
+        - 停效處理
+    end note
+```
 
 ---
 
@@ -111,185 +984,52 @@ src/main/java/com/insurance/policyholder/
 │   │   │   ├── Address.java
 │   │   │   └── Money.java
 │   │   └── enums/                   # Domain Enums
-│   │       ├── Gender.java
-│   │       ├── PolicyHolderStatus.java
-│   │       ├── PolicyType.java
-│   │       └── PolicyStatus.java
 │   ├── event/                       # Domain Events
-│   │   ├── DomainEvent.java
-│   │   ├── PolicyHolderCreated.java
-│   │   ├── PolicyHolderUpdated.java
-│   │   ├── PolicyHolderDeleted.java
-│   │   └── PolicyAdded.java
 │   ├── service/                     # Domain Services
-│   │   └── PolicyHolderDomainService.java
 │   └── exception/                   # Domain Exceptions
-│       ├── DomainException.java
-│       ├── PolicyHolderNotFoundException.java
-│       ├── PolicyHolderNotActiveException.java
-│       └── PolicyNotFoundException.java
 │
 ├── application/                     # 🟢 Application Layer
 │   ├── command/                     # Commands (Write)
-│   │   ├── CreatePolicyHolderCommand.java
-│   │   ├── UpdatePolicyHolderCommand.java
-│   │   ├── DeletePolicyHolderCommand.java
-│   │   └── AddPolicyCommand.java
 │   ├── commandhandler/              # Command Handlers
-│   │   ├── CreatePolicyHolderCommandHandler.java
-│   │   ├── UpdatePolicyHolderCommandHandler.java
-│   │   ├── DeletePolicyHolderCommandHandler.java
-│   │   └── AddPolicyCommandHandler.java
 │   ├── query/                       # Queries (Read)
-│   │   ├── GetPolicyHolderQuery.java
-│   │   ├── GetPolicyHolderByNationalIdQuery.java
-│   │   ├── SearchPolicyHoldersQuery.java
-│   │   ├── GetPolicyHolderPoliciesQuery.java
-│   │   └── GetPolicyQuery.java
 │   ├── queryhandler/                # Query Handlers
-│   │   ├── GetPolicyHolderQueryHandler.java
-│   │   ├── SearchPolicyHoldersQueryHandler.java
-│   │   ├── GetPolicyHolderPoliciesQueryHandler.java
-│   │   └── GetPolicyQueryHandler.java
 │   ├── readmodel/                   # Read Models (DTOs)
-│   │   ├── PolicyHolderReadModel.java
-│   │   ├── PolicyHolderListItemReadModel.java
-│   │   ├── PolicyReadModel.java
-│   │   └── PagedResult.java
 │   └── port/
 │       ├── input/                   # Input Ports
-│       │   ├── CommandHandler.java
-│       │   └── QueryHandler.java
 │       └── output/                  # Output Ports
-│           ├── PolicyHolderRepository.java
-│           ├── PolicyHolderQueryRepository.java
-│           ├── DomainEventPublisher.java
-│           └── EventStore.java
 │
 └── infrastructure/                  # 🟠 Infrastructure Layer（最外層）
     ├── adapter/
     │   ├── input/rest/              # REST API Adapter
-    │   │   ├── PolicyHolderController.java
-    │   │   ├── mapper/
-    │   │   │   └── PolicyHolderRestMapper.java
-    │   │   ├── request/
-    │   │   │   ├── CreatePolicyHolderRequest.java
-    │   │   │   ├── UpdatePolicyHolderRequest.java
-    │   │   │   ├── AddPolicyRequest.java
-    │   │   │   └── AddressRequest.java
-    │   │   └── response/
-    │   │       ├── ApiResponse.java
-    │   │       ├── ErrorResponse.java
-    │   │       ├── PolicyHolderResponse.java
-    │   │       ├── PolicyResponse.java
-    │   │       └── PageResponse.java
     │   └── output/
     │       ├── persistence/         # JPA Adapter
-    │       │   ├── adapter/
-    │       │   ├── entity/
-    │       │   ├── mapper/
-    │       │   └── repository/
     │       └── event/               # Event Store Adapter
-    │           ├── DomainEventPublisherAdapter.java
-    │           └── EventStoreAdapter.java
     ├── config/                      # Spring Configurations
-    │   └── JpaConfig.java
     └── exception/                   # Global Exception Handler
-        └── GlobalExceptionHandler.java
 ```
 
 ---
 
-## 領域模型
+## API 端點
 
-### Aggregate 設計
+### 保戶管理 API
 
-```
-PolicyHolder Aggregate
-│
-├── PolicyHolder (Aggregate Root)
-│   ├── PolicyHolderId      ─── Value Object (格式: PH + 10位數字)
-│   ├── NationalId          ─── Value Object (台灣身分證驗證)
-│   ├── PersonalInfo        ─── Value Object (姓名、性別、生日)
-│   ├── ContactInfo         ─── Value Object (手機、Email)
-│   ├── Address             ─── Value Object (郵遞區號、縣市、區域、街道)
-│   ├── status              ─── Enum (ACTIVE, INACTIVE, SUSPENDED)
-│   ├── policies            ─── Entity Collection
-│   └── domainEvents        ─── Event List
-│
-└── Policy (Entity)
-    ├── PolicyId            ─── Value Object (格式: PO + 10位數字)
-    ├── policyType          ─── Enum (LIFE, HEALTH, ACCIDENT, TRAVEL, PROPERTY, AUTO, SAFETY)
-    ├── premium             ─── Money Value Object
-    ├── sumInsured          ─── Money Value Object
-    ├── startDate           ─── LocalDate
-    ├── endDate             ─── LocalDate (nullable, 終身險無到期日)
-    └── status              ─── Enum (ACTIVE, EXPIRED, CANCELLED)
-```
+| Method | Endpoint | 說明 |
+|--------|----------|------|
+| `POST` | `/api/v1/policyholders` | 新增保戶 |
+| `GET` | `/api/v1/policyholders/{id}` | 依 ID 查詢保戶 |
+| `GET` | `/api/v1/policyholders/national-id/{nationalId}` | 依身分證字號查詢 |
+| `GET` | `/api/v1/policyholders` | 搜尋保戶（支援分頁、篩選） |
+| `PUT` | `/api/v1/policyholders/{id}` | 修改保戶聯絡資訊 |
+| `DELETE` | `/api/v1/policyholders/{id}` | 軟刪除保戶 |
 
-### 領域事件
+### 保單管理 API
 
-| 事件 | 觸發時機 | 用途 |
-|------|----------|------|
-| `PolicyHolderCreated` | 新增保戶成功 | 通知下游系統、建立初始資料 |
-| `PolicyHolderUpdated` | 修改保戶成功 | 同步更新、稽核記錄 |
-| `PolicyHolderDeleted` | 刪除保戶成功 | 清理關聯資料（軟刪除） |
-| `PolicyAdded` | 新增保單成功 | 觸發保單生效流程 |
-
-### 業務規則
-
-| 規則 | 說明 |
-|------|------|
-| 身分證字號不可修改 | 建立後為唯一識別，不允許變更 |
-| 年齡限制 | 保戶須年滿 18 歲 |
-| 軟刪除 | 刪除保戶時狀態改為 INACTIVE |
-| 保單新增限制 | 僅 ACTIVE 狀態保戶可新增保單 |
-| SUSPENDED 狀態 | 停權狀態禁止任何修改操作 |
-
----
-
-## CQRS 設計
-
-本系統採用 **CQRS Level 2**（模型分離，同資料庫）：
-
-### Command Side（寫入端）
-
-```
-Request → Controller → CommandHandler → Domain Model → Repository → Database
-                              │
-                              ▼
-                       Domain Events → Event Store
-```
-
-### Query Side（讀取端）
-
-```
-Request → Controller → QueryHandler → Read Model ← QueryRepository ← Database
-```
-
-### 為什麼選擇 Level 2？
-
-| Level | 說明 | 優點 | 缺點 |
-|-------|------|------|------|
-| Level 1 | 單一模型 | 簡單 | 讀寫耦合 |
-| **Level 2** | **模型分離，同 DB** | **讀寫分離、查詢優化** | **需維護兩套模型** |
-| Level 3 | 讀寫 DB 分離 | 高效能、可擴展 | 複雜、最終一致性 |
-
----
-
-## 技術堆疊
-
-| 類別 | 技術 | 版本 |
-|------|------|------|
-| 語言 | Java | 17+ |
-| 框架 | Spring Boot | 3.x |
-| API 文件 | OpenAPI / Swagger | 3.0 |
-| 資料庫 | H2 Database (In-Memory) | Latest |
-| ORM | Spring Data JPA / Hibernate | 3.x |
-| 建置工具 | Gradle | 8.x |
-| 單元測試 | JUnit 5, Mockito, AssertJ | Latest |
-| 架構測試 | ArchUnit | Latest |
-| BDD 測試 | Cucumber | Latest |
+| Method | Endpoint | 說明 |
+|--------|----------|------|
+| `POST` | `/api/v1/policyholders/{id}/policies` | 新增保單 |
+| `GET` | `/api/v1/policyholders/{id}/policies` | 查詢保戶所有保單 |
+| `GET` | `/api/v1/policyholders/{id}/policies/{policyId}` | 查詢單一保單 |
 
 ---
 
@@ -328,174 +1068,6 @@ gradle bootRun
 
 ---
 
-## API 端點
-
-### 保戶管理 API
-
-| Method | Endpoint | 說明 |
-|--------|----------|------|
-| `POST` | `/api/v1/policyholders` | 新增保戶 |
-| `GET` | `/api/v1/policyholders/{id}` | 依 ID 查詢保戶 |
-| `GET` | `/api/v1/policyholders/national-id/{nationalId}` | 依身分證字號查詢 |
-| `GET` | `/api/v1/policyholders` | 搜尋保戶（支援分頁、篩選） |
-| `PUT` | `/api/v1/policyholders/{id}` | 修改保戶聯絡資訊 |
-| `DELETE` | `/api/v1/policyholders/{id}` | 軟刪除保戶 |
-
-### 保單管理 API
-
-| Method | Endpoint | 說明 |
-|--------|----------|------|
-| `POST` | `/api/v1/policyholders/{id}/policies` | 新增保單 |
-| `GET` | `/api/v1/policyholders/{id}/policies` | 查詢保戶所有保單 |
-| `GET` | `/api/v1/policyholders/{id}/policies/{policyId}` | 查詢單一保單 |
-
-### 查詢參數
-
-**搜尋保戶 `GET /api/v1/policyholders`**
-
-| 參數 | 類型 | 說明 |
-|------|------|------|
-| `name` | String | 姓名模糊搜尋 |
-| `status` | String | 狀態篩選 (ACTIVE, INACTIVE, SUSPENDED) |
-| `page` | Integer | 頁碼（從 0 開始） |
-| `size` | Integer | 每頁筆數（預設 20） |
-
-**查詢保單 `GET /api/v1/policyholders/{id}/policies`**
-
-| 參數 | 類型 | 說明 |
-|------|------|------|
-| `type` | String | 保單類型篩選 (LIFE, HEALTH, ACCIDENT, etc.) |
-| `status` | String | 保單狀態篩選 (ACTIVE, EXPIRED, CANCELLED) |
-
----
-
-## API 使用範例
-
-### 新增保戶
-
-```bash
-curl -X POST http://localhost:8080/api/v1/policyholders \
-  -H "Content-Type: application/json" \
-  -d '{
-    "nationalId": "A123456789",
-    "name": "王小明",
-    "gender": "MALE",
-    "birthDate": "1990-01-15",
-    "mobilePhone": "0912345678",
-    "email": "wang@example.com",
-    "address": {
-      "zipCode": "100",
-      "city": "台北市",
-      "district": "中正區",
-      "street": "重慶南路一段1號"
-    }
-  }'
-```
-
-**回應：**
-```json
-{
-  "success": true,
-  "data": {
-    "id": "PH0000000001",
-    "nationalId": "A123456789",
-    "name": "王小明",
-    "gender": "MALE",
-    "birthDate": "1990-01-15",
-    "mobilePhone": "0912345678",
-    "email": "wang@example.com",
-    "address": {
-      "zipCode": "100",
-      "city": "台北市",
-      "district": "中正區",
-      "street": "重慶南路一段1號"
-    },
-    "status": "ACTIVE"
-  },
-  "message": "PolicyHolder created successfully"
-}
-```
-
-### 新增保單
-
-```bash
-curl -X POST http://localhost:8080/api/v1/policyholders/PH0000000001/policies \
-  -H "Content-Type: application/json" \
-  -d '{
-    "policyType": "LIFE",
-    "premium": 10000,
-    "sumInsured": 1000000,
-    "startDate": "2026-01-16",
-    "endDate": "2027-01-16"
-  }'
-```
-
-### 查詢保戶列表（分頁 + 篩選）
-
-```bash
-curl "http://localhost:8080/api/v1/policyholders?name=王&status=ACTIVE&page=0&size=10"
-```
-
-### 查詢保戶保單（類型篩選）
-
-```bash
-curl "http://localhost:8080/api/v1/policyholders/PH0000000001/policies?type=LIFE"
-```
-
----
-
-## 資料庫設計
-
-### ER Diagram
-
-```
-┌─────────────────────────────┐       ┌─────────────────────────────┐
-│      policy_holders          │       │         policies             │
-├─────────────────────────────┤       ├─────────────────────────────┤
-│ PK id           VARCHAR(13)  │───┐   │ PK id           VARCHAR(12)  │
-│    national_id  VARCHAR(10)  │   │   │ FK policy_holder_id          │
-│    name         VARCHAR(50)  │   └──►│    policy_type  VARCHAR(20)  │
-│    gender       VARCHAR(10)  │       │    premium_amount DECIMAL    │
-│    birth_date   DATE         │       │    sum_insured   DECIMAL     │
-│    mobile_phone VARCHAR(10)  │       │    start_date    DATE        │
-│    email        VARCHAR(100) │       │    end_date      DATE        │
-│    zip_code     VARCHAR(5)   │       │    status        VARCHAR(20) │
-│    city         VARCHAR(10)  │       │    created_at    TIMESTAMP   │
-│    district     VARCHAR(10)  │       │    updated_at    TIMESTAMP   │
-│    street       VARCHAR(100) │       └─────────────────────────────┘
-│    status       VARCHAR(20)  │
-│    created_at   TIMESTAMP    │       ┌─────────────────────────────┐
-│    updated_at   TIMESTAMP    │       │       domain_events          │
-│    version      BIGINT       │       ├─────────────────────────────┤
-└─────────────────────────────┘       │ PK event_id      VARCHAR(36)  │
-                                       │    aggregate_id  VARCHAR(50)  │
-                                       │    aggregate_type VARCHAR(50) │
-                                       │    event_type    VARCHAR(100) │
-                                       │    event_data    CLOB         │
-                                       │    occurred_on   TIMESTAMP    │
-                                       │    published     BOOLEAN      │
-                                       └─────────────────────────────┘
-```
-
-### 索引設計
-
-**policy_holders 表**
-- `idx_national_id` ON (national_id) - UNIQUE
-- `idx_name` ON (name)
-- `idx_status` ON (status)
-
-**policies 表**
-- `idx_policy_holder_id` ON (policy_holder_id)
-- `idx_policy_type` ON (policy_type)
-- `idx_status` ON (status)
-
-**domain_events 表**
-- `idx_aggregate` ON (aggregate_id, aggregate_type)
-- `idx_event_type` ON (event_type)
-- `idx_published` ON (published)
-
----
-
 ## 測試
 
 ### 測試統計
@@ -523,114 +1095,13 @@ gradle test
 # 執行架構測試
 gradle test --tests "*ArchitectureTest*"
 
-# 執行整合測試
-gradle test --tests "*IntegrationTest*"
-
 # 產生覆蓋率報告
 gradle test jacocoTestReport
-
-# 查看報告
-open build/reports/jacoco/test/html/index.html
-```
-
-### 架構測試 (ArchUnit)
-
-確保六角形架構的依賴規則：
-
-```java
-@ArchTest
-static final ArchRule domain_should_not_depend_on_application =
-    noClasses()
-        .that().resideInAPackage("..domain..")
-        .should().dependOnClassesThat()
-        .resideInAPackage("..application..");
-
-@ArchTest
-static final ArchRule domain_should_not_depend_on_infrastructure =
-    noClasses()
-        .that().resideInAPackage("..domain..")
-        .should().dependOnClassesThat()
-        .resideInAPackage("..infrastructure..");
-
-@ArchTest
-static final ArchRule application_should_not_depend_on_infrastructure =
-    noClasses()
-        .that().resideInAPackage("..application..")
-        .should().dependOnClassesThat()
-        .resideInAPackage("..infrastructure..");
-```
-
-### BDD 測試 (Cucumber Features)
-
-```
-src/test/resources/features/
-├── create-policyholder.feature    # US1: 新增保戶
-├── query-policyholder.feature     # US2: 查詢保戶
-├── update-policyholder.feature    # US3: 修改保戶
-├── delete-policyholder.feature    # US4: 刪除保戶
-├── add-policy.feature             # US5: 新增保單
-└── query-policies.feature         # US6: 查詢保單
 ```
 
 ---
 
-## 設定說明
-
-### application.yml
-
-```yaml
-spring:
-  application:
-    name: policyholder-management
-
-  datasource:
-    url: jdbc:h2:mem:policyholderdb
-    driver-class-name: org.h2.Driver
-    username: sa
-    password:
-
-  h2:
-    console:
-      enabled: true
-      path: /h2-console
-
-  jpa:
-    hibernate:
-      ddl-auto: create-drop
-    show-sql: true
-    properties:
-      hibernate:
-        format_sql: true
-
-springdoc:
-  api-docs:
-    path: /api-docs
-  swagger-ui:
-    path: /swagger-ui.html
-
-logging:
-  level:
-    com.insurance.policyholder: DEBUG
-    org.hibernate.SQL: DEBUG
-```
-
----
-
-## 錯誤處理
-
-### 錯誤回應格式
-
-```json
-{
-  "timestamp": "2026-01-16T15:30:00",
-  "status": 404,
-  "error": "POLICY_HOLDER_NOT_FOUND",
-  "message": "Policy holder not found: PH9999999999",
-  "path": "/api/v1/policyholders/PH9999999999"
-}
-```
-
-### 錯誤代碼
+## 錯誤代碼
 
 | 錯誤代碼 | HTTP Status | 說明 |
 |----------|-------------|------|
@@ -640,30 +1111,6 @@ logging:
 | `VALIDATION_ERROR` | 400 | 輸入驗證錯誤 |
 | `INVALID_ARGUMENT` | 400 | 非法參數 |
 | `INTERNAL_ERROR` | 500 | 系統內部錯誤 |
-
----
-
-## 相關文件
-
-| 文件 | 說明 |
-|------|------|
-| `specs/001-policyholder-management/spec.md` | 功能規格文件 |
-| `specs/001-policyholder-management/plan.md` | 實作計畫文件 |
-| `specs/001-policyholder-management/tasks.md` | 任務清單 |
-| `specs/001-policyholder-management/domain-model.md` | 領域模型設計 |
-| `.specify/memory/constitution.md` | 專案架構原則 |
-
----
-
-## 未來規劃
-
-- [ ] 升級至 CQRS Level 3（讀寫資料庫分離）
-- [ ] 整合訊息佇列（Kafka / RabbitMQ）
-- [ ] 實作完整 Event Sourcing
-- [ ] 新增保單受益人管理功能
-- [ ] 整合外部身分驗證服務
-- [ ] 新增 Kubernetes 部署配置
-- [ ] 實作 API Rate Limiting
 
 ---
 
