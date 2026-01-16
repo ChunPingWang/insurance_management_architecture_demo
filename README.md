@@ -2639,20 +2639,16 @@ curl -o openapi.yaml http://localhost:8080/api-docs.yaml
 **專案實踐**:
 
 ```mermaid
-block-beta
-    columns 1
-    block:context["PolicyHolder Bounded Context\n(保戶管理限界上下文)"]
-        columns 2
-        block:lang["Ubiquitous Language (通用語言)"]
-            columns 1
+flowchart TB
+    subgraph context["PolicyHolder Bounded Context (保戶管理限界上下文)"]
+        subgraph lang["Ubiquitous Language (通用語言)"]
             l1["PolicyHolder (保戶)"]
             l2["Policy (保單)"]
             l3["NationalId (身分證字號)"]
             l4["Premium (保費) / SumInsured (保額)"]
             l5["PolicyType (壽險、健康險、意外險等)"]
         end
-        block:model["Domain Model"]
-            columns 1
+        subgraph model["Domain Model"]
             m1["Aggregate: PolicyHolder"]
             m2["Entity: Policy"]
             m3["Value Objects: NationalId, Money, Address"]
@@ -2741,21 +2737,16 @@ public class AddPolicyCommandHandler {
 | Generic Domain | 審計日誌 | 通用的技術領域 | ⚡ 透過 Event Store 部分實現 |
 
 ```mermaid
-block-beta
-    columns 1
-    block:domain["Insurance Domain (保險領域)"]
-        columns 1
-        block:core["Core Domain (核心領域) - 已實作 ✅"]
-            columns 3
+flowchart TB
+    subgraph domain["Insurance Domain (保險領域)"]
+        subgraph core["Core Domain (核心領域) - 已實作 ✅"]
             crud["保戶 CRUD"]
             policy["保單管理"]
             status["狀態管理"]
         end
-        space
-        block:support["Supporting & Generic Domains"]
-            columns 2
-            audit["Generic: 審計日誌\n(Event Store 實作)"]
-            future["其他領域\n(未來擴展)"]
+        subgraph support["Supporting & Generic Domains"]
+            audit["Generic: 審計日誌<br/>(Event Store 實作)"]
+            future["其他領域<br/>(未來擴展)"]
         end
     end
 
@@ -2819,34 +2810,22 @@ flowchart TB
 **本專案採用六角形架構的分層**:
 
 ```mermaid
-block-beta
-    columns 1
-
-    block:presentation["Presentation Layer (表現層)"]
-        columns 1
+flowchart TB
+    subgraph presentation["Presentation Layer (表現層)"]
         p1["PolicyHolderController, REST DTOs, Swagger UI"]
     end
 
-    space
-
-    block:application["Application Layer (應用層)"]
-        columns 1
+    subgraph application["Application Layer (應用層)"]
         a1["Commands, Queries, Handlers, Ports, Read Models"]
         a2["協調領域層物件完成用例 | 不包含業務邏輯"]
     end
 
-    space
-
-    block:domain["Domain Layer (領域層)"]
-        columns 1
+    subgraph domain["Domain Layer (領域層)"]
         d1["Aggregates, Entities, Value Objects, Domain Events, Domain Services"]
         d2["純粹的業務邏輯 | 無任何外部依賴"]
     end
 
-    space
-
-    block:infra["Infrastructure Layer (基礎設施層)"]
-        columns 1
+    subgraph infra["Infrastructure Layer (基礎設施層)"]
         i1["JPA Repositories, Event Store, Mappers, JPA Entities"]
         i2["技術實現細節 | 實作 Ports 介面"]
     end
