@@ -1,0 +1,706 @@
+openapi: 3.0.3
+info:
+  title: 保戶基本資料管理系統 API
+  description: 提供保戶與保單資料的 CRUD 操作
+  version: 1.0.0
+  contact:
+    name: Development Team
+
+servers:
+  - url: http://localhost:8080
+    description: Development server
+
+tags:
+  - name: PolicyHolder
+    description: 保戶管理 API
+  - name: Policy
+    description: 保單管理 API
+
+paths:
+  /api/v1/policyholders:
+    post:
+      tags:
+        - PolicyHolder
+      summary: 新增保戶
+      description: 建立新的保戶資料
+      operationId: createPolicyHolder
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreatePolicyHolderRequest'
+      responses:
+        '201':
+          description: 保戶建立成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse_PolicyHolderResponse'
+        '400':
+          description: 請求參數錯誤或業務規則驗證失敗
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '409':
+          description: 身分證字號已存在
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+    get:
+      tags:
+        - PolicyHolder
+      summary: 查詢保戶列表
+      description: 分頁查詢保戶列表，支援篩選與排序
+      operationId: searchPolicyHolders
+      parameters:
+        - name: name
+          in: query
+          description: 姓名（模糊搜尋）
+          schema:
+            type: string
+        - name: nationalId
+          in: query
+          description: 身分證字號（精確查詢）
+          schema:
+            type: string
+        - name: status
+          in: query
+          description: 保戶狀態
+          schema:
+            $ref: '#/components/schemas/PolicyHolderStatus'
+        - name: page
+          in: query
+          description: 頁碼（從 0 開始）
+          schema:
+            type: integer
+            default: 0
+        - name: size
+          in: query
+          description: 每頁筆數
+          schema:
+            type: integer
+            default: 20
+            maximum: 100
+        - name: sort
+          in: query
+          description: 排序欄位與方向
+          schema:
+            type: string
+            example: createdAt,desc
+      responses:
+        '200':
+          description: 查詢成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse_PagePolicyHolderListResponse'
+
+  /api/v1/policyholders/{id}:
+    get:
+      tags:
+        - PolicyHolder
+      summary: 查詢單一保戶
+      description: 依保戶編號查詢保戶詳細資料
+      operationId: getPolicyHolder
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: 保戶編號
+          schema:
+            type: string
+            example: PH0000000001
+      responses:
+        '200':
+          description: 查詢成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse_PolicyHolderResponse'
+        '404':
+          description: 保戶不存在
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+    put:
+      tags:
+        - PolicyHolder
+      summary: 修改保戶
+      description: 更新保戶聯絡資訊（身分證字號與保戶編號不可修改）
+      operationId: updatePolicyHolder
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: 保戶編號
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdatePolicyHolderRequest'
+      responses:
+        '200':
+          description: 修改成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse_PolicyHolderResponse'
+        '400':
+          description: 請求參數錯誤或業務規則驗證失敗
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: 保戶不存在
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '409':
+          description: 版本衝突（並發編輯）
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+    delete:
+      tags:
+        - PolicyHolder
+      summary: 刪除保戶
+      description: 軟刪除保戶（狀態改為 INACTIVE）
+      operationId: deletePolicyHolder
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: 保戶編號
+          schema:
+            type: string
+      responses:
+        '204':
+          description: 刪除成功
+        '404':
+          description: 保戶不存在
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /api/v1/policyholders/{id}/policies:
+    post:
+      tags:
+        - Policy
+      summary: 新增保單
+      description: 為保戶新增保單
+      operationId: addPolicy
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: 保戶編號
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AddPolicyRequest'
+      responses:
+        '201':
+          description: 保單建立成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse_PolicyResponse'
+        '400':
+          description: 請求參數錯誤或業務規則驗證失敗
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: 保戶不存在
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+    get:
+      tags:
+        - Policy
+      summary: 查詢保戶保單
+      description: 查詢保戶持有的所有保單
+      operationId: getPolicyHolderPolicies
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: 保戶編號
+          schema:
+            type: string
+        - name: policyType
+          in: query
+          description: 保單類型篩選
+          schema:
+            $ref: '#/components/schemas/PolicyType'
+        - name: status
+          in: query
+          description: 保單狀態篩選
+          schema:
+            $ref: '#/components/schemas/PolicyStatus'
+      responses:
+        '200':
+          description: 查詢成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse_ListPolicyResponse'
+        '404':
+          description: 保戶不存在
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /api/v1/policies/{policyId}:
+    get:
+      tags:
+        - Policy
+      summary: 查詢單一保單
+      description: 依保單編號查詢保單詳細資料
+      operationId: getPolicy
+      parameters:
+        - name: policyId
+          in: path
+          required: true
+          description: 保單編號
+          schema:
+            type: string
+      responses:
+        '200':
+          description: 查詢成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse_PolicyResponse'
+        '404':
+          description: 保單不存在
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+components:
+  schemas:
+    # ==================== Request DTOs ====================
+
+    CreatePolicyHolderRequest:
+      type: object
+      required:
+        - nationalId
+        - name
+        - gender
+        - birthDate
+        - mobilePhone
+        - address
+      properties:
+        nationalId:
+          type: string
+          description: 身分證字號
+          example: A123456789
+          pattern: '^[A-Z][12]\d{8}$'
+        name:
+          type: string
+          description: 姓名
+          maxLength: 50
+          example: 王小明
+        gender:
+          $ref: '#/components/schemas/Gender'
+        birthDate:
+          type: string
+          format: date
+          description: 出生日期
+          example: '1990-01-15'
+        mobilePhone:
+          type: string
+          description: 手機號碼
+          pattern: '^09\d{8}$'
+          example: '0912345678'
+        email:
+          type: string
+          format: email
+          description: 電子郵件（選填）
+          example: wang@example.com
+        address:
+          $ref: '#/components/schemas/AddressRequest'
+
+    UpdatePolicyHolderRequest:
+      type: object
+      properties:
+        name:
+          type: string
+          description: 姓名
+          maxLength: 50
+        gender:
+          $ref: '#/components/schemas/Gender'
+        mobilePhone:
+          type: string
+          description: 手機號碼
+          pattern: '^09\d{8}$'
+        email:
+          type: string
+          format: email
+          description: 電子郵件
+        address:
+          $ref: '#/components/schemas/AddressRequest'
+        version:
+          type: integer
+          format: int64
+          description: 樂觀鎖版本號
+
+    AddPolicyRequest:
+      type: object
+      required:
+        - policyNumber
+        - policyType
+        - policyName
+        - premiumAmount
+        - sumInsured
+        - effectiveDate
+      properties:
+        policyNumber:
+          type: string
+          description: 保單號碼
+          maxLength: 20
+          example: POL-2026-001
+        policyType:
+          $ref: '#/components/schemas/PolicyType'
+        policyName:
+          type: string
+          description: 保單名稱
+          maxLength: 100
+          example: 幸福人生終身壽險
+        premiumAmount:
+          type: number
+          format: decimal
+          description: 年繳保費
+          example: 50000.00
+        sumInsured:
+          type: number
+          format: decimal
+          description: 保險金額
+          example: 1000000.00
+        effectiveDate:
+          type: string
+          format: date
+          description: 生效日期
+          example: '2026-02-01'
+        expiryDate:
+          type: string
+          format: date
+          description: 到期日期（終身險可不填）
+
+    AddressRequest:
+      type: object
+      required:
+        - zipCode
+        - city
+        - district
+        - street
+      properties:
+        zipCode:
+          type: string
+          description: 郵遞區號
+          maxLength: 5
+          example: '100'
+        city:
+          type: string
+          description: 縣市
+          maxLength: 10
+          example: 台北市
+        district:
+          type: string
+          description: 區域
+          maxLength: 10
+          example: 中正區
+        street:
+          type: string
+          description: 街道地址
+          maxLength: 100
+          example: 忠孝東路一段1號
+
+    # ==================== Response DTOs ====================
+
+    ApiResponse_PolicyHolderResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+        code:
+          type: string
+          example: '0000'
+        message:
+          type: string
+          example: 成功
+        data:
+          $ref: '#/components/schemas/PolicyHolderResponse'
+        timestamp:
+          type: string
+          format: date-time
+        requestId:
+          type: string
+          format: uuid
+
+    ApiResponse_PagePolicyHolderListResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+        code:
+          type: string
+        message:
+          type: string
+        data:
+          $ref: '#/components/schemas/PagePolicyHolderListResponse'
+        timestamp:
+          type: string
+          format: date-time
+        requestId:
+          type: string
+          format: uuid
+
+    ApiResponse_PolicyResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+        code:
+          type: string
+        message:
+          type: string
+        data:
+          $ref: '#/components/schemas/PolicyResponse'
+        timestamp:
+          type: string
+          format: date-time
+        requestId:
+          type: string
+          format: uuid
+
+    ApiResponse_ListPolicyResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+        code:
+          type: string
+        message:
+          type: string
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/PolicyResponse'
+        timestamp:
+          type: string
+          format: date-time
+        requestId:
+          type: string
+          format: uuid
+
+    PolicyHolderResponse:
+      type: object
+      properties:
+        policyHolderId:
+          type: string
+          description: 保戶編號
+          example: PH0000000001
+        nationalId:
+          type: string
+          description: 身分證字號（部分遮罩）
+          example: A123***789
+        name:
+          type: string
+          description: 姓名
+        gender:
+          $ref: '#/components/schemas/Gender'
+        birthDate:
+          type: string
+          format: date
+        mobilePhone:
+          type: string
+        email:
+          type: string
+        address:
+          $ref: '#/components/schemas/AddressResponse'
+        status:
+          $ref: '#/components/schemas/PolicyHolderStatus'
+        policies:
+          type: array
+          items:
+            $ref: '#/components/schemas/PolicyResponse'
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+        version:
+          type: integer
+          format: int64
+
+    PolicyHolderListItemResponse:
+      type: object
+      properties:
+        policyHolderId:
+          type: string
+        name:
+          type: string
+        nationalId:
+          type: string
+          description: 部分遮罩
+        mobilePhone:
+          type: string
+        status:
+          $ref: '#/components/schemas/PolicyHolderStatus'
+        policyCount:
+          type: integer
+        createdAt:
+          type: string
+          format: date-time
+
+    PagePolicyHolderListResponse:
+      type: object
+      properties:
+        content:
+          type: array
+          items:
+            $ref: '#/components/schemas/PolicyHolderListItemResponse'
+        totalElements:
+          type: integer
+          format: int64
+        totalPages:
+          type: integer
+        page:
+          type: integer
+        size:
+          type: integer
+
+    PolicyResponse:
+      type: object
+      properties:
+        policyId:
+          type: string
+        policyNumber:
+          type: string
+        policyType:
+          $ref: '#/components/schemas/PolicyType'
+        policyName:
+          type: string
+        premiumAmount:
+          type: number
+          format: decimal
+        sumInsured:
+          type: number
+          format: decimal
+        effectiveDate:
+          type: string
+          format: date
+        expiryDate:
+          type: string
+          format: date
+        status:
+          $ref: '#/components/schemas/PolicyStatus'
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+
+    AddressResponse:
+      type: object
+      properties:
+        zipCode:
+          type: string
+        city:
+          type: string
+        district:
+          type: string
+        street:
+          type: string
+
+    ErrorResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: false
+        code:
+          type: string
+          example: DIS-B00001
+        message:
+          type: string
+          example: 業務錯誤訊息
+        errors:
+          type: array
+          items:
+            $ref: '#/components/schemas/FieldError'
+        timestamp:
+          type: string
+          format: date-time
+        requestId:
+          type: string
+          format: uuid
+
+    FieldError:
+      type: object
+      properties:
+        field:
+          type: string
+        message:
+          type: string
+
+    # ==================== Enums ====================
+
+    Gender:
+      type: string
+      enum:
+        - MALE
+        - FEMALE
+      description: 性別
+
+    PolicyHolderStatus:
+      type: string
+      enum:
+        - ACTIVE
+        - INACTIVE
+        - SUSPENDED
+      description: 保戶狀態
+
+    PolicyType:
+      type: string
+      enum:
+        - LIFE
+        - ACCIDENT
+        - SAFETY
+      description: 保單類型
+
+    PolicyStatus:
+      type: string
+      enum:
+        - ACTIVE
+        - LAPSED
+        - TERMINATED
+      description: 保單狀態
