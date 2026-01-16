@@ -36,6 +36,14 @@
 - [專案結構](#專案結構)
 - [API 端點](#api-端點)
 - [快速開始](#快速開始)
+- [DDD 戰略與戰術設計模式](#ddd-戰略與戰術設計模式)
+  - [Strategic Design (戰略設計)](#strategic-design-戰略設計)
+  - [Tactical Design (戰術設計)](#tactical-design-戰術設計)
+- [GoF 設計模式與架構模式](#gof-設計模式與架構模式)
+  - [Creational Patterns (創建型模式)](#creational-patterns-創建型模式)
+  - [Structural Patterns (結構型模式)](#structural-patterns-結構型模式)
+  - [Behavioral Patterns (行為型模式)](#behavioral-patterns-行為型模式)
+  - [Architectural Patterns (架構模式)](#architectural-patterns-架構模式)
 
 ---
 
@@ -1929,6 +1937,411 @@ gradle bootRun
 
 ---
 
+## Swagger / OpenAPI 文件
+
+本專案使用 **SpringDoc OpenAPI** 提供完整的 API 文件與互動式測試介面。
+
+### Swagger UI 使用說明
+
+啟動應用程式後，開啟瀏覽器訪問：
+
+```
+http://localhost:8080/swagger-ui.html
+```
+
+### API 文件結構
+
+```yaml
+openapi: 3.0.1
+info:
+  title: PolicyHolder Management API
+  description: 保戶基本資料管理系統 API
+  version: v1
+
+servers:
+  - url: http://localhost:8080
+    description: Local Development Server
+
+paths:
+  /api/v1/policyholders:
+    post: 建立新保戶
+    get: 搜尋保戶列表
+  /api/v1/policyholders/{id}:
+    get: 查詢保戶詳情
+    put: 更新保戶資料
+    delete: 刪除保戶
+  /api/v1/policyholders/{id}/policies:
+    post: 新增保單
+    get: 查詢保戶保單列表
+```
+
+### OpenAPI 端點
+
+| 端點 | 說明 |
+|------|------|
+| `/api-docs` | JSON 格式 OpenAPI 規格文件 |
+| `/api-docs.yaml` | YAML 格式 OpenAPI 規格文件 |
+| `/swagger-ui.html` | Swagger UI 互動式文件 |
+
+---
+
+### API 測試案例 (cURL)
+
+以下提供完整的 cURL 測試案例，可直接在終端機執行。
+
+#### 1. 建立新保戶
+
+```bash
+curl -X POST http://localhost:8080/api/v1/policyholders \
+  -H "Content-Type: application/json" \
+  -d '{
+    "nationalId": "A123456789",
+    "name": "王小明",
+    "gender": "MALE",
+    "birthDate": "1990-01-15",
+    "mobilePhone": "0912345678",
+    "email": "wang@example.com",
+    "address": {
+      "zipCode": "10001",
+      "city": "台北市",
+      "district": "信義區",
+      "street": "測試路123號"
+    }
+  }'
+```
+
+**預期回應 (201 Created):**
+
+```json
+{
+  "success": true,
+  "data": {
+    "id": "PH0000000001",
+    "nationalId": "A123456789",
+    "name": "王小明",
+    "gender": "MALE",
+    "birthDate": "1990-01-15",
+    "mobilePhone": "0912345678",
+    "email": "wang@example.com",
+    "address": {
+      "zipCode": "10001",
+      "city": "台北市",
+      "district": "信義區",
+      "street": "測試路123號",
+      "fullAddress": "10001 台北市信義區測試路123號"
+    },
+    "status": "ACTIVE",
+    "createdAt": "2024-01-15T10:30:00",
+    "updatedAt": "2024-01-15T10:30:00",
+    "version": 0
+  },
+  "timestamp": "2024-01-15T10:30:00"
+}
+```
+
+#### 2. 查詢保戶詳情
+
+```bash
+curl -X GET http://localhost:8080/api/v1/policyholders/PH0000000001
+```
+
+**預期回應 (200 OK):**
+
+```json
+{
+  "success": true,
+  "data": {
+    "id": "PH0000000001",
+    "nationalId": "A123456789",
+    "name": "王小明",
+    "gender": "MALE",
+    "birthDate": "1990-01-15",
+    "mobilePhone": "0912345678",
+    "email": "wang@example.com",
+    "address": {
+      "zipCode": "10001",
+      "city": "台北市",
+      "district": "信義區",
+      "street": "測試路123號",
+      "fullAddress": "10001 台北市信義區測試路123號"
+    },
+    "status": "ACTIVE"
+  },
+  "timestamp": "2024-01-15T10:30:00"
+}
+```
+
+#### 3. 依身分證字號查詢
+
+```bash
+curl -X GET http://localhost:8080/api/v1/policyholders/national-id/A123456789
+```
+
+#### 4. 搜尋保戶列表（支援分頁）
+
+```bash
+# 基本分頁查詢
+curl -X GET "http://localhost:8080/api/v1/policyholders?page=0&size=10"
+
+# 依姓名搜尋
+curl -X GET "http://localhost:8080/api/v1/policyholders?name=王&page=0&size=10"
+
+# 依狀態篩選
+curl -X GET "http://localhost:8080/api/v1/policyholders?status=ACTIVE&page=0&size=10"
+```
+
+**預期回應 (200 OK):**
+
+```json
+{
+  "success": true,
+  "data": {
+    "content": [
+      {
+        "id": "PH0000000001",
+        "maskedNationalId": "A123***789",
+        "name": "王小明",
+        "gender": "MALE",
+        "birthDate": "1990-01-15",
+        "mobilePhone": "0912345678",
+        "status": "ACTIVE"
+      }
+    ],
+    "page": 0,
+    "size": 10,
+    "totalElements": 1,
+    "totalPages": 1,
+    "first": true,
+    "last": true
+  },
+  "timestamp": "2024-01-15T10:30:00"
+}
+```
+
+#### 5. 更新保戶資料
+
+```bash
+curl -X PUT http://localhost:8080/api/v1/policyholders/PH0000000001 \
+  -H "Content-Type: application/json" \
+  -d '{
+    "mobilePhone": "0987654321",
+    "email": "wang.new@example.com",
+    "address": {
+      "zipCode": "10002",
+      "city": "台北市",
+      "district": "大安區",
+      "street": "新地址路456號"
+    }
+  }'
+```
+
+**預期回應 (200 OK):**
+
+```json
+{
+  "success": true,
+  "data": {
+    "id": "PH0000000001",
+    "mobilePhone": "0987654321",
+    "email": "wang.new@example.com",
+    "address": {
+      "zipCode": "10002",
+      "city": "台北市",
+      "district": "大安區",
+      "street": "新地址路456號",
+      "fullAddress": "10002 台北市大安區新地址路456號"
+    },
+    "status": "ACTIVE",
+    "version": 1
+  },
+  "timestamp": "2024-01-15T10:35:00"
+}
+```
+
+#### 6. 刪除保戶（軟刪除）
+
+```bash
+curl -X DELETE http://localhost:8080/api/v1/policyholders/PH0000000001
+```
+
+**預期回應 (204 No Content)**
+
+#### 7. 新增保單
+
+```bash
+curl -X POST http://localhost:8080/api/v1/policyholders/PH0000000001/policies \
+  -H "Content-Type: application/json" \
+  -d '{
+    "policyType": "LIFE",
+    "premium": 10000,
+    "sumInsured": 1000000,
+    "startDate": "2024-01-01",
+    "endDate": "2025-01-01"
+  }'
+```
+
+**預期回應 (201 Created):**
+
+```json
+{
+  "success": true,
+  "data": {
+    "id": "PO0000000001",
+    "policyHolderId": "PH0000000001",
+    "policyType": "LIFE",
+    "premium": 10000,
+    "sumInsured": 1000000,
+    "startDate": "2024-01-01",
+    "endDate": "2025-01-01",
+    "status": "ACTIVE"
+  },
+  "timestamp": "2024-01-15T10:40:00"
+}
+```
+
+#### 8. 查詢保戶保單列表
+
+```bash
+# 查詢所有保單
+curl -X GET http://localhost:8080/api/v1/policyholders/PH0000000001/policies
+
+# 依保單類型篩選
+curl -X GET "http://localhost:8080/api/v1/policyholders/PH0000000001/policies?policyType=LIFE"
+
+# 依保單狀態篩選
+curl -X GET "http://localhost:8080/api/v1/policyholders/PH0000000001/policies?status=ACTIVE"
+```
+
+#### 9. 查詢單一保單
+
+```bash
+curl -X GET http://localhost:8080/api/v1/policyholders/PH0000000001/policies/PO0000000001
+```
+
+---
+
+### 錯誤回應範例
+
+#### 400 Bad Request - 驗證失敗
+
+```bash
+curl -X POST http://localhost:8080/api/v1/policyholders \
+  -H "Content-Type: application/json" \
+  -d '{
+    "nationalId": "INVALID",
+    "name": "",
+    "gender": "MALE",
+    "birthDate": "1990-01-15"
+  }'
+```
+
+**回應:**
+
+```json
+{
+  "status": 400,
+  "error": "VALIDATION_ERROR",
+  "message": "輸入資料驗證失敗",
+  "path": "/api/v1/policyholders",
+  "timestamp": "2024-01-15T10:30:00",
+  "fieldErrors": [
+    {
+      "field": "nationalId",
+      "message": "身分證字號格式不正確",
+      "rejectedValue": "INVALID"
+    },
+    {
+      "field": "name",
+      "message": "姓名不得為空",
+      "rejectedValue": ""
+    }
+  ]
+}
+```
+
+#### 404 Not Found - 資源不存在
+
+```bash
+curl -X GET http://localhost:8080/api/v1/policyholders/PH9999999999
+```
+
+**回應:**
+
+```json
+{
+  "status": 404,
+  "error": "POLICY_HOLDER_NOT_FOUND",
+  "message": "找不到保戶: PH9999999999",
+  "path": "/api/v1/policyholders/PH9999999999",
+  "timestamp": "2024-01-15T10:30:00"
+}
+```
+
+#### 409 Conflict - 重複資源
+
+```bash
+# 嘗試建立已存在的身分證字號
+curl -X POST http://localhost:8080/api/v1/policyholders \
+  -H "Content-Type: application/json" \
+  -d '{
+    "nationalId": "A123456789",
+    "name": "重複測試",
+    ...
+  }'
+```
+
+**回應:**
+
+```json
+{
+  "status": 409,
+  "error": "DUPLICATE_NATIONAL_ID",
+  "message": "身分證字號已存在: A123456789",
+  "path": "/api/v1/policyholders",
+  "timestamp": "2024-01-15T10:30:00"
+}
+```
+
+---
+
+### Swagger UI 測試步驟
+
+1. **啟動應用程式**
+   ```bash
+   gradle bootRun
+   ```
+
+2. **開啟 Swagger UI**
+   ```
+   http://localhost:8080/swagger-ui.html
+   ```
+
+3. **選擇 API 端點**
+   - 展開 `PolicyHolder` 標籤
+   - 選擇要測試的 API 方法
+
+4. **填寫參數並執行**
+   - 點擊 "Try it out" 按鈕
+   - 填入必要參數
+   - 點擊 "Execute" 執行請求
+
+5. **檢視結果**
+   - Response body: 回應內容
+   - Response headers: 回應標頭
+   - Curl: 等效的 cURL 指令
+
+### OpenAPI 規格下載
+
+```bash
+# 下載 JSON 格式
+curl -o openapi.json http://localhost:8080/api-docs
+
+# 下載 YAML 格式
+curl -o openapi.yaml http://localhost:8080/api-docs.yaml
+```
+
+---
+
 ## 測試
 
 ### 測試統計
@@ -2208,6 +2621,1030 @@ gradle bootRun
 | **Repository** | `PolicyHolderRepository.java` | 聚合儲存介面 |
 | **Factory** | `PolicyHolder.create()` | 工廠方法模式 |
 | **Factory** | `Policy.create()` | 工廠方法模式 |
+
+---
+
+## DDD 戰略與戰術設計模式
+
+本專案完整實踐 **Domain-Driven Design (DDD)** 的戰略設計與戰術設計模式。DDD 是一種軟體開發方法論，強調以業務領域為核心進行軟體設計。
+
+### Strategic Design (戰略設計)
+
+戰略設計關注的是如何在高層次上組織和劃分領域，確保系統的整體架構與業務需求對齊。
+
+#### 1. Bounded Context (限界上下文)
+
+> **定義**: 一個明確的邊界，在此邊界內，特定的領域模型是有效且一致的。
+
+**專案實踐**:
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│                 PolicyHolder Bounded Context                 │
+│                      (保戶管理限界上下文)                      │
+├─────────────────────────────────────────────────────────────┤
+│  Ubiquitous Language (通用語言):                             │
+│  ├── PolicyHolder (保戶)                                     │
+│  ├── Policy (保單)                                           │
+│  ├── NationalId (身分證字號)                                  │
+│  ├── Premium (保費)                                          │
+│  ├── SumInsured (保額)                                       │
+│  └── PolicyType (保單類型: 壽險、健康險、意外險等)              │
+│                                                             │
+│  Domain Model:                                              │
+│  ├── Aggregate: PolicyHolder                                │
+│  ├── Entity: Policy                                         │
+│  ├── Value Objects: NationalId, Money, Address, etc.        │
+│  └── Domain Events: PolicyHolderCreated, PolicyAdded, etc.  │
+└─────────────────────────────────────────────────────────────┘
+```
+
+**程式碼對應**:
+
+| 元素 | 路徑 | 說明 |
+|------|------|------|
+| Context 根目錄 | `com.insurance.policyholder` | 整個限界上下文的根套件 |
+| Domain Layer | `domain/` | 領域層，包含核心業務邏輯 |
+| Application Layer | `application/` | 應用層，協調領域層 |
+| Infrastructure Layer | `infrastructure/` | 基礎設施層，技術實現 |
+
+---
+
+#### 2. Ubiquitous Language (通用語言)
+
+> **定義**: 由開發團隊與業務專家共同建立的語言，在程式碼、文件、對話中一致使用。
+
+**專案中的通用語言表**:
+
+| 中文術語 | 英文術語 | 程式碼命名 | 說明 |
+|----------|----------|------------|------|
+| 保戶 | PolicyHolder | `PolicyHolder` | 購買保險的客戶 |
+| 保單 | Policy | `Policy` | 保險契約 |
+| 身分證字號 | National ID | `NationalId` | 台灣國民身分證統一編號 |
+| 保費 | Premium | `Money premium` | 客戶需繳納的費用 |
+| 保額 | Sum Insured | `Money sumInsured` | 保險理賠金額上限 |
+| 保單類型 | Policy Type | `PolicyType` | 壽險/健康險/意外險等 |
+| 保戶狀態 | PolicyHolder Status | `PolicyHolderStatus` | 活動中/停用/暫停 |
+| 保單狀態 | Policy Status | `PolicyStatus` | 有效/過期/取消 |
+| 建立保戶 | Create PolicyHolder | `CreatePolicyHolderCommand` | 新增保戶的業務操作 |
+| 新增保單 | Add Policy | `AddPolicyCommand` | 為保戶新增保單的業務操作 |
+
+**程式碼範例** - 通用語言在程式碼中的體現:
+
+```java
+// 業務人員說：「為保戶新增一張壽險保單」
+// 程式碼直接對應這個描述：
+public class AddPolicyCommandHandler {
+    public PolicyReadModel handle(AddPolicyCommand command) {
+        // 找到保戶
+        PolicyHolder policyHolder = repository.findById(policyHolderId);
+
+        // 建立保單 (壽險類型)
+        Policy policy = Policy.create(
+            PolicyType.LIFE,           // 壽險
+            Money.twd(command.getPremium()),      // 保費
+            Money.twd(command.getSumInsured()),   // 保額
+            command.getStartDate(),
+            command.getEndDate()
+        );
+
+        // 為保戶新增保單
+        policyHolder.addPolicy(policy);
+
+        // 儲存並發布領域事件
+        repository.save(policyHolder);
+        eventPublisher.publishAll(policyHolder.getDomainEventsAndClear());
+    }
+}
+```
+
+---
+
+#### 3. Subdomain (子領域)
+
+> **定義**: 將整體業務領域分解為更小的子領域，每個子領域有其特定的職責。
+
+**專案子領域劃分**:
+
+| 子領域類型 | 子領域名稱 | 說明 | 本專案實作範圍 |
+|------------|------------|------|----------------|
+| **Core Domain** | 保戶管理 | 系統的核心競爭力，差異化的來源 | ✅ 完整實作 |
+| Supporting Domain | 理賠處理 | 支援核心業務的次要領域 | 🔜 未來擴展 |
+| Supporting Domain | 通知服務 | 支援核心業務的次要領域 | 🔜 未來擴展 |
+| Generic Domain | 身份驗證 | 通用的技術領域 | 🔜 未來擴展 |
+| Generic Domain | 審計日誌 | 通用的技術領域 | ⚡ 透過 Event Store 部分實現 |
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│                    Insurance Domain                          │
+├─────────────────────────────────────────────────────────────┤
+│  ┌─────────────────────────────────────────────────────┐    │
+│  │              Core Domain (核心領域)                  │    │
+│  │         PolicyHolder Management (保戶管理)          │    │
+│  │  ┌─────────────┐  ┌─────────────┐  ┌────────────┐  │    │
+│  │  │  保戶 CRUD  │  │  保單管理   │  │ 狀態管理   │  │    │
+│  │  └─────────────┘  └─────────────┘  └────────────┘  │    │
+│  └─────────────────────────────────────────────────────┘    │
+│                                                             │
+│  ┌──────────────────────┐  ┌──────────────────────┐        │
+│  │  Supporting Domain   │  │  Supporting Domain   │        │
+│  │    Claims (理賠)     │  │  Notification (通知) │        │
+│  │      (Future)        │  │      (Future)        │        │
+│  └──────────────────────┘  └──────────────────────┘        │
+│                                                             │
+│  ┌──────────────────────┐  ┌──────────────────────┐        │
+│  │   Generic Domain     │  │   Generic Domain     │        │
+│  │  Auth (身份驗證)     │  │  Audit (審計日誌)    │        │
+│  │     (Future)         │  │  (Event Store)       │        │
+│  └──────────────────────┘  └──────────────────────┘        │
+└─────────────────────────────────────────────────────────────┘
+```
+
+---
+
+#### 4. Context Mapping (上下文映射)
+
+> **定義**: 描述不同限界上下文之間的關係和整合方式。
+
+**本專案的上下文關係** (包含未來擴展規劃):
+
+```
+┌──────────────────────────────────────────────────────────────────┐
+│                        Context Map                                │
+├──────────────────────────────────────────────────────────────────┤
+│                                                                   │
+│   ┌─────────────────────┐         ┌─────────────────────┐        │
+│   │    PolicyHolder     │ ──ACL──►│     Claims          │        │
+│   │      Context        │         │     Context         │        │
+│   │    (Upstream)       │         │   (Downstream)      │        │
+│   │                     │         │    [Future]         │        │
+│   └─────────────────────┘         └─────────────────────┘        │
+│            │                                                      │
+│            │ Published                                            │
+│            │ Language                                             │
+│            ▼                                                      │
+│   ┌─────────────────────┐         ┌─────────────────────┐        │
+│   │   Domain Events     │ ──OHS──►│   Notification      │        │
+│   │ (PolicyHolderCreated│         │     Context         │        │
+│   │  PolicyAdded, etc.) │         │    [Future]         │        │
+│   └─────────────────────┘         └─────────────────────┘        │
+│                                                                   │
+│   Legend:                                                         │
+│   ─ACL─► Anti-Corruption Layer (防腐層)                          │
+│   ─OHS─► Open Host Service (開放主機服務)                         │
+│                                                                   │
+└──────────────────────────────────────────────────────────────────┘
+```
+
+**整合模式說明**:
+
+| 整合模式 | 英文名稱 | 用途 | 本專案應用 |
+|----------|----------|------|------------|
+| **Published Language** | 發布語言 | 透過 Domain Events 發布標準化的業務事件 | `PolicyHolderCreated`, `PolicyAdded` 等事件 |
+| **Open Host Service** | 開放主機服務 | 透過 REST API 提供標準化的服務介面 | `PolicyHolderController` 提供 OpenAPI 3.0 規範的 API |
+| **Anti-Corruption Layer** | 防腐層 | 隔離外部系統的模型差異 | Mapper 類別實現模型轉換 |
+
+---
+
+#### 5. Layered Architecture (分層架構)
+
+> **定義**: 將系統分為多個層次，每層有明確的職責，層與層之間透過介面通訊。
+
+**本專案採用六角形架構的分層**:
+
+```
+┌────────────────────────────────────────────────────────────────┐
+│                     Presentation Layer                          │
+│                   (表現層 / Input Adapters)                     │
+│  ┌──────────────────────────────────────────────────────────┐  │
+│  │  PolicyHolderController, REST DTOs, Swagger UI           │  │
+│  └──────────────────────────────────────────────────────────┘  │
+├────────────────────────────────────────────────────────────────┤
+│                     Application Layer                           │
+│                       (應用層)                                  │
+│  ┌──────────────────────────────────────────────────────────┐  │
+│  │  Commands, Queries, Handlers, Ports, Read Models         │  │
+│  │  - 協調領域層物件完成用例                                  │  │
+│  │  - 不包含業務邏輯                                         │  │
+│  └──────────────────────────────────────────────────────────┘  │
+├────────────────────────────────────────────────────────────────┤
+│                       Domain Layer                              │
+│                       (領域層)                                  │
+│  ┌──────────────────────────────────────────────────────────┐  │
+│  │  Aggregates, Entities, Value Objects, Domain Events,     │  │
+│  │  Domain Services                                         │  │
+│  │  - 純粹的業務邏輯                                         │  │
+│  │  - 無任何外部依賴                                         │  │
+│  └──────────────────────────────────────────────────────────┘  │
+├────────────────────────────────────────────────────────────────┤
+│                   Infrastructure Layer                          │
+│                  (基礎設施層 / Output Adapters)                  │
+│  ┌──────────────────────────────────────────────────────────┐  │
+│  │  JPA Repositories, Event Store, Mappers, JPA Entities    │  │
+│  │  - 技術實現細節                                           │  │
+│  │  - 實作 Application Layer 定義的 Ports                   │  │
+│  └──────────────────────────────────────────────────────────┘  │
+└────────────────────────────────────────────────────────────────┘
+```
+
+**各層職責與程式碼對應**:
+
+| 層級 | 職責 | 主要程式碼 | 允許依賴 |
+|------|------|------------|----------|
+| **Domain** | 業務邏輯、領域規則 | `PolicyHolder`, `Policy`, Value Objects, `DomainEvent` | 無外部依賴 |
+| **Application** | 用例協調、交易管理 | `*Command`, `*Query`, `*Handler`, Ports | Domain Layer |
+| **Infrastructure** | 技術實現、外部整合 | `*Adapter`, `*Mapper`, JPA Entities | Application, Domain |
+| **Presentation** | API 介面、請求回應 | `*Controller`, `*Request`, `*Response` | Application Layer |
+
+---
+
+### Tactical Design (戰術設計)
+
+戰術設計關注的是如何在限界上下文內部實現領域模型，包括各種建構區塊。
+
+#### 1. Aggregate (聚合)
+
+> **定義**: 一組相關物件的集合，作為資料修改的單元。有一個根實體作為唯一入口。
+
+**專案實踐**:
+
+| 聚合 | 聚合根 | 包含實體 | 包含值物件 |
+|------|--------|----------|------------|
+| PolicyHolder Aggregate | `PolicyHolder` | `Policy` | `PolicyHolderId`, `NationalId`, `PersonalInfo`, `ContactInfo`, `Address` |
+
+**聚合設計原則**:
+
+```java
+// domain/model/aggregate/PolicyHolder.java
+public class PolicyHolder {
+    // 1. 聚合根是唯一入口
+    private final PolicyHolderId id;
+
+    // 2. 內部實體由聚合根管理
+    private final List<Policy> policies = new ArrayList<>();
+
+    // 3. 領域事件由聚合根收集
+    private final List<DomainEvent> domainEvents = new ArrayList<>();
+
+    // 4. 所有修改必須透過聚合根
+    public void addPolicy(Policy policy) {
+        if (status != PolicyHolderStatus.ACTIVE) {
+            throw new IllegalStateException("Cannot add policy to inactive policyholder");
+        }
+        this.policies.add(policy);
+        registerEvent(new PolicyAdded(...));
+    }
+
+    // 5. 確保聚合的一致性
+    public void updateContactInfo(ContactInfo contactInfo) {
+        // 業務驗證...
+        this.contactInfo = contactInfo;
+        registerEvent(new PolicyHolderUpdated(...));
+    }
+}
+```
+
+---
+
+#### 2. Entity (實體)
+
+> **定義**: 具有唯一識別的領域物件，其生命週期中身份保持不變。
+
+**專案實踐**:
+
+| 實體 | 識別屬性 | 可變屬性 | 說明 |
+|------|----------|----------|------|
+| `PolicyHolder` | `PolicyHolderId` | `contactInfo`, `address`, `status` | 聚合根實體 |
+| `Policy` | `PolicyId` | `status` | 聚合內部實體 |
+
+**實體設計特點**:
+- 透過 ID 判斷相等性 (identity equality)
+- 具有生命週期和狀態變化
+- 封裝業務行為和規則
+
+---
+
+#### 3. Value Object (值物件)
+
+> **定義**: 沒有概念上的識別，透過其屬性值來描述領域概念。
+
+**專案實踐**:
+
+| 值物件 | 封裝屬性 | 業務規則 |
+|--------|----------|----------|
+| `PolicyHolderId` | `value` | 格式: PH + 10位數字 |
+| `PolicyId` | `value` | 格式: PO + 10位數字 |
+| `NationalId` | `value` | 台灣身分證字號驗證演算法 |
+| `PersonalInfo` | `name`, `gender`, `birthDate` | 姓名長度、年齡驗證 |
+| `ContactInfo` | `mobilePhone`, `email` | 手機格式、Email 格式驗證 |
+| `Address` | `zipCode`, `city`, `district`, `street` | 台灣郵遞區號驗證 |
+| `Money` | `amount`, `currency` | 金額非負、幣別一致性 |
+
+**值物件設計原則**:
+
+```java
+// domain/model/valueobject/NationalId.java
+public final class NationalId {  // 1. 使用 final class
+    private final String value;  // 2. 所有屬性 final
+
+    private NationalId(String value) {  // 3. 私有建構子
+        this.value = value;
+    }
+
+    public static NationalId of(String value) {  // 4. 靜態工廠方法
+        validate(value);  // 5. 自我驗證
+        return new NationalId(value);
+    }
+
+    @Override
+    public boolean equals(Object o) {  // 6. 值相等性
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
+        NationalId that = (NationalId) o;
+        return Objects.equals(value, that.value);
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hash(value);
+    }
+}
+```
+
+---
+
+#### 4. Domain Service (領域服務)
+
+> **定義**: 封裝不自然屬於任何實體或值物件的領域邏輯。
+
+**專案實踐**:
+
+```java
+// domain/service/PolicyHolderDomainService.java
+@Service
+public class PolicyHolderDomainService {
+    private static final int MINIMUM_AGE = 18;
+
+    // 跨聚合的業務規則：年齡驗證
+    public boolean isAdult(LocalDate birthDate) {
+        if (birthDate == null) return false;
+        return Period.between(birthDate, LocalDate.now()).getYears() >= MINIMUM_AGE;
+    }
+
+    // 業務規則：是否可以新增保單
+    public boolean canAddPolicy(PolicyHolderStatus status) {
+        return status == PolicyHolderStatus.ACTIVE;
+    }
+
+    // 業務規則：是否可以更新
+    public boolean canUpdate(PolicyHolderStatus status) {
+        return status == PolicyHolderStatus.ACTIVE;
+    }
+}
+```
+
+---
+
+#### 5. Domain Event (領域事件)
+
+> **定義**: 捕捉領域中發生的重要業務事件，用於聚合間的通訊和事件溯源。
+
+**專案實踐**:
+
+| 事件 | 觸發時機 | 攜帶資料 | 用途 |
+|------|----------|----------|------|
+| `PolicyHolderCreated` | 保戶建立 | 完整快照 | 通知、審計 |
+| `PolicyHolderUpdated` | 保戶更新 | 前後快照 | 變更追蹤 |
+| `PolicyHolderDeleted` | 保戶刪除 | 刪除快照 | 審計、回復 |
+| `PolicyAdded` | 保單新增 | 保單快照 | 通知、統計 |
+
+**事件設計**:
+
+```java
+// domain/event/DomainEvent.java
+public abstract class DomainEvent {
+    private final String eventId;        // 事件唯一識別
+    private final LocalDateTime occurredOn;  // 發生時間
+    private final String aggregateId;    // 聚合根 ID
+    private final String aggregateType;  // 聚合類型
+
+    public abstract String getEventType();  // 事件類型
+}
+```
+
+---
+
+#### 6. Repository (儲存庫)
+
+> **定義**: 提供類似集合的介面來存取聚合，隱藏資料存取的技術細節。
+
+**專案實踐**:
+
+| Repository 介面 | 職責 | 實作 |
+|-----------------|------|------|
+| `PolicyHolderRepository` | 保戶聚合的寫入操作 | `PolicyHolderRepositoryAdapter` |
+| `PolicyHolderQueryRepository` | 保戶的查詢操作 | `PolicyHolderQueryRepositoryAdapter` |
+| `EventStore` | 領域事件的持久化 | `EventStoreAdapter` |
+
+**Repository 設計原則**:
+
+```java
+// application/port/output/PolicyHolderRepository.java
+public interface PolicyHolderRepository {
+    // 只針對聚合根操作
+    PolicyHolder save(PolicyHolder policyHolder);
+    Optional<PolicyHolder> findById(PolicyHolderId id);
+    Optional<PolicyHolder> findByNationalId(NationalId nationalId);
+    boolean existsByNationalId(NationalId nationalId);
+    void deleteById(PolicyHolderId id);
+    // 注意：沒有 findByPolicyId() 這類方法，因為 Policy 不是聚合根
+}
+```
+
+---
+
+#### 7. Factory (工廠)
+
+> **定義**: 封裝複雜物件的建立邏輯，確保物件在建立時就處於有效狀態。
+
+**專案實踐**:
+
+| 工廠方法 | 用途 | 特點 |
+|----------|------|------|
+| `PolicyHolder.create()` | 建立新保戶 | 自動產生 ID、觸發事件 |
+| `PolicyHolder.reconstitute()` | 從持久化重建 | 不觸發事件 |
+| `Policy.create()` | 建立新保單 | 驗證日期範圍 |
+| `Policy.reconstitute()` | 從持久化重建 | 不觸發事件 |
+| `NationalId.of()` | 建立身分證字號 | 執行驗證 |
+| `Money.twd()` | 建立台幣金額 | 預設幣別 |
+
+---
+
+### DDD 戰術設計模式總覽
+
+| 模式 | 英文名稱 | 主要實踐位置 | 核心職責 |
+|------|----------|--------------|----------|
+| **Aggregate** | 聚合 | `PolicyHolder` + `Policy` | 一致性邊界、交易邊界 |
+| **Entity** | 實體 | `PolicyHolder`, `Policy` | 具有唯一識別的業務物件 |
+| **Value Object** | 值物件 | `*Id.java`, `Money`, `Address` 等 | 不可變的領域概念描述 |
+| **Domain Service** | 領域服務 | `PolicyHolderDomainService` | 跨聚合業務邏輯 |
+| **Domain Event** | 領域事件 | `*Created`, `*Updated` 等 | 捕捉重要業務事件 |
+| **Repository** | 儲存庫 | `*Repository.java` interfaces | 聚合持久化抽象 |
+| **Factory** | 工廠 | `create()`, `of()` 方法 | 封裝物件建立邏輯 |
+
+---
+
+## GoF 設計模式與架構模式
+
+本專案採用多種經典的 **Gang of Four (GoF) 設計模式** 與現代 **架構模式**，以達到高內聚、低耦合的設計目標。以下詳細說明各模式的實踐方式與程式碼位置。
+
+### Creational Patterns (創建型模式)
+
+#### 1. Factory Method Pattern (工廠方法模式)
+
+> **定義**: 定義一個用於建立物件的介面，讓子類別決定實例化哪一個類別。
+
+**專案實踐位置**:
+
+| 類別 | 方法 | 說明 |
+|------|------|------|
+| `PolicyHolder.java` | `create()` | 建立新保戶，自動產生 ID 並觸發領域事件 |
+| `PolicyHolder.java` | `reconstitute()` | 從持久化層重建保戶物件（不觸發事件） |
+| `Policy.java` | `create()` | 建立新保單 |
+| `Policy.java` | `reconstitute()` | 從持久化層重建保單物件 |
+
+**程式碼範例**:
+
+```java
+// domain/model/aggregate/PolicyHolder.java
+public class PolicyHolder {
+    // 私有建構子，強制使用工廠方法
+    private PolicyHolder(PolicyHolderId id, NationalId nationalId, ...) {
+        // 初始化邏輯
+    }
+
+    // 工廠方法：建立新保戶
+    public static PolicyHolder create(
+            NationalId nationalId,
+            PersonalInfo personalInfo,
+            ContactInfo contactInfo,
+            Address address) {
+        PolicyHolderId id = PolicyHolderId.generate();
+        PolicyHolder policyHolder = new PolicyHolder(id, nationalId, ...);
+        policyHolder.registerEvent(new PolicyHolderCreated(...));
+        return policyHolder;
+    }
+
+    // 工廠方法：從持久化層重建（不觸發事件）
+    public static PolicyHolder reconstitute(
+            PolicyHolderId id, NationalId nationalId, ..., Long version) {
+        return new PolicyHolder(id, nationalId, ...);
+    }
+}
+```
+
+**設計優點**:
+- 封裝物件建立邏輯，確保業務規則一致性
+- 區分「新建」與「重建」兩種情境
+- 控制領域事件的觸發時機
+
+---
+
+#### 2. Static Factory Method Pattern (靜態工廠方法模式)
+
+> **定義**: 使用靜態方法取代建構子來建立物件，提供更具語意的建立方式。
+
+**專案實踐位置**:
+
+| 類別 | 方法 | 說明 |
+|------|------|------|
+| `PolicyHolderId.java` | `generate()`, `of()` | 產生新 ID 或從字串建立 |
+| `NationalId.java` | `of()` | 驗證並建立身分證字號 |
+| `Money.java` | `of()`, `twd()` | 建立金額物件 |
+| `Address.java` | `of()` | 建立地址物件 |
+| `SearchPolicyHoldersQuery.java` | `byName()`, `byStatus()`, `all()` | 建立不同類型的查詢 |
+
+**程式碼範例**:
+
+```java
+// domain/model/valueobject/NationalId.java
+public final class NationalId {
+    private final String value;
+
+    private NationalId(String value) {
+        this.value = value;
+    }
+
+    public static NationalId of(String value) {
+        validate(value);  // 執行台灣身分證字號驗證
+        return new NationalId(value);
+    }
+}
+
+// application/query/SearchPolicyHoldersQuery.java
+public class SearchPolicyHoldersQuery {
+    public static SearchPolicyHoldersQuery byName(String name, int page, int size) {
+        return new SearchPolicyHoldersQuery(name, null, page, size);
+    }
+
+    public static SearchPolicyHoldersQuery byStatus(PolicyHolderStatus status, int page, int size) {
+        return new SearchPolicyHoldersQuery(null, status, page, size);
+    }
+
+    public static SearchPolicyHoldersQuery all(int page, int size) {
+        return new SearchPolicyHoldersQuery(null, null, page, size);
+    }
+}
+```
+
+---
+
+#### 3. Singleton Pattern (單例模式)
+
+> **定義**: 確保一個類別只有一個實例，並提供全域存取點。
+
+**專案實踐**: 透過 Spring Framework 的 IoC 容器隱式實現。
+
+| 類別 | 註解 | 說明 |
+|------|------|------|
+| `PolicyHolderDomainService.java` | `@Service` | 領域服務單例 |
+| `PolicyHolderController.java` | `@RestController` | REST 控制器單例 |
+| `PolicyHolderRepositoryAdapter.java` | `@Repository` | Repository 實作單例 |
+| 所有 `*CommandHandler.java` | `@Service` | 命令處理器單例 |
+| 所有 `*QueryHandler.java` | `@Service` | 查詢處理器單例 |
+
+---
+
+### Structural Patterns (結構型模式)
+
+#### 4. Adapter Pattern (適配器模式)
+
+> **定義**: 將一個類別的介面轉換成客戶期望的另一個介面，使原本不相容的類別可以合作。
+
+**專案實踐**: 六角形架構的核心模式，用於連接領域核心與外部系統。
+
+**Input Adapters (輸入適配器)**:
+
+| 類別 | 轉換 | 說明 |
+|------|------|------|
+| `PolicyHolderController.java` | HTTP Request → Command/Query | REST API 轉換為應用層命令 |
+| `PolicyHolderRestMapper.java` | Request DTO → Command | 請求物件轉換為命令物件 |
+
+**Output Adapters (輸出適配器)**:
+
+| 類別 | 轉換 | 說明 |
+|------|------|------|
+| `PolicyHolderRepositoryAdapter.java` | Domain ↔ JPA Entity | 領域物件與 JPA 實體雙向轉換 |
+| `DomainEventPublisherAdapter.java` | Domain Event → Spring Event | 領域事件轉換為 Spring 事件 |
+| `EventStoreAdapter.java` | Domain Event → JPA Entity | 領域事件持久化 |
+
+**程式碼範例**:
+
+```java
+// infrastructure/adapter/output/persistence/adapter/PolicyHolderRepositoryAdapter.java
+@Repository
+@Transactional
+public class PolicyHolderRepositoryAdapter implements PolicyHolderRepository {
+    private final PolicyHolderJpaRepository jpaRepository;
+    private final PolicyHolderMapper mapper;
+
+    @Override
+    public PolicyHolder save(PolicyHolder policyHolder) {
+        // 領域物件 → JPA Entity
+        PolicyHolderJpaEntity entity = mapper.toEntity(policyHolder);
+        PolicyHolderJpaEntity savedEntity = jpaRepository.save(entity);
+        // JPA Entity → 領域物件
+        return mapper.toDomain(savedEntity);
+    }
+}
+```
+
+---
+
+#### 5. Mapper Pattern (映射器模式)
+
+> **定義**: 在不同層之間轉換物件，保持各層的獨立性。
+
+**專案實踐位置**:
+
+| 類別 | 轉換方向 | 說明 |
+|------|----------|------|
+| `PolicyHolderMapper.java` | Domain ↔ JPA Entity | 保戶領域物件與 JPA 實體轉換 |
+| `PolicyMapper.java` | Domain ↔ JPA Entity | 保單領域物件與 JPA 實體轉換 |
+| `PolicyHolderRestMapper.java` | Request → Command | REST 請求轉命令 |
+| `PolicyHolderResponseMapper.java` | ReadModel → Response | 讀取模型轉 REST 回應 |
+| `DomainEventMapper.java` | Domain Event ↔ JPA Entity | 領域事件與 JPA 實體轉換 |
+
+---
+
+#### 6. Facade Pattern (外觀模式)
+
+> **定義**: 為子系統中的一組介面提供一個統一的介面，定義一個高層介面使子系統更容易使用。
+
+**專案實踐**:
+
+| 類別 | 說明 |
+|------|------|
+| `PolicyHolderController.java` | 作為整個保戶管理子系統的統一入口 |
+| `GlobalExceptionHandler.java` | 統一處理所有例外，提供一致的錯誤回應格式 |
+
+**程式碼範例**:
+
+```java
+// infrastructure/adapter/input/rest/PolicyHolderController.java
+@RestController
+@RequestMapping("/api/v1/policyholders")
+public class PolicyHolderController {
+    // 統一入口：隱藏複雜的命令/查詢處理器細節
+
+    @PostMapping
+    public ResponseEntity<ApiResponse<PolicyHolderResponse>> createPolicyHolder(
+            @Valid @RequestBody CreatePolicyHolderRequest request) {
+        // 將複雜的內部處理流程封裝在簡單的 API 介面後面
+        CreatePolicyHolderCommand command = mapper.toCommand(request);
+        PolicyHolderReadModel result = createHandler.handle(command);
+        return ResponseEntity.status(HttpStatus.CREATED)
+                .body(ApiResponse.success(responseMapper.toResponse(result)));
+    }
+}
+```
+
+---
+
+### Behavioral Patterns (行為型模式)
+
+#### 7. Command Pattern (命令模式)
+
+> **定義**: 將請求封裝成物件，使你可以用不同的請求參數化客戶端。
+
+**專案實踐**: CQRS 的 Command Side 核心實現。
+
+| Command 類別 | Handler 類別 | 說明 |
+|--------------|--------------|------|
+| `CreatePolicyHolderCommand` | `CreatePolicyHolderCommandHandler` | 建立保戶 |
+| `UpdatePolicyHolderCommand` | `UpdatePolicyHolderCommandHandler` | 更新保戶 |
+| `DeletePolicyHolderCommand` | `DeletePolicyHolderCommandHandler` | 刪除保戶 |
+| `AddPolicyCommand` | `AddPolicyCommandHandler` | 新增保單 |
+
+**程式碼範例**:
+
+```java
+// application/command/CreatePolicyHolderCommand.java
+public class CreatePolicyHolderCommand {
+    private final String nationalId;
+    private final String name;
+    private final String gender;
+    private final LocalDate birthDate;
+    // ... 封裝所有建立保戶所需的參數
+}
+
+// application/commandhandler/CreatePolicyHolderCommandHandler.java
+@Service
+@Transactional
+public class CreatePolicyHolderCommandHandler
+        implements CommandHandler<CreatePolicyHolderCommand, PolicyHolderReadModel> {
+
+    @Override
+    public PolicyHolderReadModel handle(CreatePolicyHolderCommand command) {
+        // 執行命令邏輯
+        PolicyHolder policyHolder = PolicyHolder.create(...);
+        repository.save(policyHolder);
+        eventPublisher.publishAll(policyHolder.getDomainEventsAndClear());
+        return readModelMapper.toReadModel(policyHolder);
+    }
+}
+```
+
+---
+
+#### 8. Strategy Pattern (策略模式)
+
+> **定義**: 定義一系列演算法，將每一個演算法封裝起來，並讓它們可以互相替換。
+
+**專案實踐**: 透過介面定義統一的處理策略。
+
+| 策略介面 | 實作類別 | 說明 |
+|----------|----------|------|
+| `CommandHandler<C, R>` | `CreatePolicyHolderCommandHandler` 等 | 命令處理策略 |
+| `QueryHandler<Q, R>` | `GetPolicyHolderQueryHandler` 等 | 查詢處理策略 |
+| `PolicyHolderRepository` | `PolicyHolderRepositoryAdapter` | 儲存策略 |
+| `DomainEventPublisher` | `DomainEventPublisherAdapter` | 事件發布策略 |
+
+**程式碼範例**:
+
+```java
+// application/port/input/CommandHandler.java
+public interface CommandHandler<C, R> {
+    R handle(C command);
+}
+
+// application/port/input/QueryHandler.java
+public interface QueryHandler<Q, R> {
+    R handle(Q query);
+}
+
+// 不同的策略實作
+@Service
+public class CreatePolicyHolderCommandHandler
+        implements CommandHandler<CreatePolicyHolderCommand, PolicyHolderReadModel> { }
+
+@Service
+public class UpdatePolicyHolderCommandHandler
+        implements CommandHandler<UpdatePolicyHolderCommand, PolicyHolderReadModel> { }
+```
+
+---
+
+#### 9. Observer Pattern (觀察者模式)
+
+> **定義**: 定義物件間的一對多依賴關係，當一個物件改變狀態時，所有依賴它的物件都會被通知並自動更新。
+
+**專案實踐**: 透過 Spring 的事件機制實現領域事件發布。
+
+| 類別 | 角色 | 說明 |
+|------|------|------|
+| `DomainEvent.java` | Subject (主題) | 領域事件抽象類別 |
+| `DomainEventPublisherAdapter.java` | Publisher | 事件發布者 |
+| `ApplicationEventPublisher` | Event Bus | Spring 事件匯流排 |
+
+**程式碼範例**:
+
+```java
+// infrastructure/adapter/output/event/DomainEventPublisherAdapter.java
+@Component
+public class DomainEventPublisherAdapter implements DomainEventPublisher {
+    private final ApplicationEventPublisher applicationEventPublisher;
+    private final EventStore eventStore;
+
+    @Override
+    public void publish(DomainEvent event) {
+        // 1. 持久化事件
+        eventStore.save(event);
+        // 2. 發布到 Spring Event Bus，通知所有觀察者
+        applicationEventPublisher.publishEvent(event);
+    }
+}
+```
+
+---
+
+#### 10. Template Method Pattern (模板方法模式)
+
+> **定義**: 定義一個操作中的演算法骨架，將一些步驟延遲到子類別。
+
+**專案實踐**: 例外處理的統一模板。
+
+| 類別 | 說明 |
+|------|------|
+| `GlobalExceptionHandler.java` | 定義統一的例外處理模板 |
+| `DomainEvent.java` | 定義領域事件的基本結構 |
+
+**程式碼範例**:
+
+```java
+// infrastructure/exception/GlobalExceptionHandler.java
+@RestControllerAdvice
+public class GlobalExceptionHandler {
+    // 模板：Log → 建立回應 → 回傳
+
+    @ExceptionHandler(PolicyHolderNotFoundException.class)
+    public ResponseEntity<ErrorResponse> handlePolicyHolderNotFoundException(
+            PolicyHolderNotFoundException ex) {
+        log.warn("PolicyHolder not found: {}", ex.getMessage());
+        return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                .body(ErrorResponse.of("POLICY_HOLDER_NOT_FOUND", ex.getMessage()));
+    }
+
+    @ExceptionHandler(DuplicateNationalIdException.class)
+    public ResponseEntity<ErrorResponse> handleDuplicateNationalIdException(
+            DuplicateNationalIdException ex) {
+        log.warn("Duplicate national ID: {}", ex.getMessage());
+        return ResponseEntity.status(HttpStatus.CONFLICT)
+                .body(ErrorResponse.of("DUPLICATE_NATIONAL_ID", ex.getMessage()));
+    }
+    // 其他例外處理遵循相同模板...
+}
+```
+
+---
+
+### Architectural Patterns (架構模式)
+
+#### 11. Repository Pattern (儲存庫模式)
+
+> **定義**: 在領域層與資料映射層之間中介，使用類似集合的介面來存取領域物件。
+
+**專案實踐**:
+
+| 介面 (Port) | 實作 (Adapter) | 說明 |
+|-------------|----------------|------|
+| `PolicyHolderRepository` | `PolicyHolderRepositoryAdapter` | 保戶聚合儲存庫 |
+| `PolicyHolderQueryRepository` | `PolicyHolderQueryRepositoryAdapter` | 保戶查詢儲存庫 |
+| `EventStore` | `EventStoreAdapter` | 領域事件儲存庫 |
+
+**程式碼範例**:
+
+```java
+// application/port/output/PolicyHolderRepository.java
+public interface PolicyHolderRepository {
+    PolicyHolder save(PolicyHolder policyHolder);
+    Optional<PolicyHolder> findById(PolicyHolderId id);
+    Optional<PolicyHolder> findByNationalId(NationalId nationalId);
+    boolean existsByNationalId(NationalId nationalId);
+    void deleteById(PolicyHolderId id);
+}
+```
+
+---
+
+#### 12. Aggregate Root Pattern (聚合根模式)
+
+> **定義**: 聚合是一組相關物件的集合，作為資料變更的單元。聚合根是聚合的入口點。
+
+**專案實踐**:
+
+| 聚合根 | 包含實體 | 說明 |
+|--------|----------|------|
+| `PolicyHolder.java` | `Policy.java` | 保戶聚合，包含多個保單 |
+
+**設計特點**:
+- 所有對 Policy 的操作必須透過 PolicyHolder
+- PolicyHolder 維護一致性邊界
+- 領域事件由聚合根收集並統一發布
+
+---
+
+#### 13. Value Object Pattern (值物件模式)
+
+> **定義**: 描述領域中某個概念的不可變物件，透過其屬性值來定義相等性。
+
+**專案實踐**:
+
+| 值物件 | 封裝概念 | 驗證邏輯 |
+|--------|----------|----------|
+| `PolicyHolderId` | 保戶編號 | 格式驗證 (PH + 10位數字) |
+| `PolicyId` | 保單編號 | 格式驗證 (PO + 10位數字) |
+| `NationalId` | 身分證字號 | 台灣身分證字號驗證演算法 |
+| `PersonalInfo` | 個人資訊 | 姓名、性別、生日驗證 |
+| `ContactInfo` | 聯絡資訊 | 手機、Email 格式驗證 |
+| `Address` | 地址 | 郵遞區號、縣市驗證 |
+| `Money` | 金額 | 幣別、數值範圍驗證 |
+
+**設計特點**:
+- 不可變 (Immutable)
+- 無識別性 (No Identity)
+- 可替換 (Substitutable)
+- 自我驗證 (Self-Validating)
+
+---
+
+#### 14. Domain Event Pattern (領域事件模式)
+
+> **定義**: 捕捉領域中發生的重要事情，並以事件的形式表達。
+
+**專案實踐**:
+
+| 事件類別 | 觸發時機 | 攜帶資料 |
+|----------|----------|----------|
+| `PolicyHolderCreated` | 保戶建立 | 完整保戶快照 |
+| `PolicyHolderUpdated` | 保戶更新 | 更新前後快照 |
+| `PolicyHolderDeleted` | 保戶刪除 | 刪除時快照 |
+| `PolicyAdded` | 保單新增 | 保單快照 |
+
+**程式碼範例**:
+
+```java
+// domain/event/DomainEvent.java
+public abstract class DomainEvent {
+    private final String eventId;
+    private final LocalDateTime occurredOn;
+    private final String aggregateId;
+    private final String aggregateType;
+
+    public abstract String getEventType();
+}
+
+// domain/event/PolicyHolderCreated.java
+public class PolicyHolderCreated extends DomainEvent {
+    private final String nationalId;
+    private final String name;
+    private final LocalDate birthDate;
+    // ... 完整的保戶建立資訊
+}
+```
+
+---
+
+#### 15. CQRS Pattern (命令查詢責任分離)
+
+> **定義**: 將讀取資料與修改資料的操作分離到不同的模型中。
+
+**本專案採用 CQRS Level 2**: 共用資料庫，但分離讀寫模型。
+
+| 層面 | Command Side | Query Side |
+|------|--------------|------------|
+| 入口 | `CommandHandler<C, R>` | `QueryHandler<Q, R>` |
+| 模型 | `PolicyHolder` (Aggregate) | `PolicyHolderReadModel` |
+| Repository | `PolicyHolderRepository` | `PolicyHolderQueryRepository` |
+| 交易 | `@Transactional` | `@Transactional(readOnly = true)` |
+
+---
+
+#### 16. Hexagonal Architecture (六角形架構)
+
+> **定義**: 又稱 Ports & Adapters，將應用程式核心與外部世界隔離。
+
+**專案架構分層**:
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│                    Infrastructure Layer                      │
+│  ┌──────────────────┐              ┌──────────────────────┐ │
+│  │  Input Adapters  │              │   Output Adapters    │ │
+│  │  - Controller    │              │   - JPA Repository   │ │
+│  │  - REST Mapper   │              │   - Event Publisher  │ │
+│  └────────┬─────────┘              └──────────┬───────────┘ │
+│           │                                   │              │
+│           ▼                                   ▼              │
+│  ┌────────────────────────────────────────────────────────┐ │
+│  │                   Application Layer                     │ │
+│  │  ┌─────────────┐    ┌─────────────┐    ┌─────────────┐ │ │
+│  │  │   Ports     │    │  Handlers   │    │  Read Model │ │ │
+│  │  │  (Input/    │◄───│  (Command/  │───►│  (DTO)      │ │ │
+│  │  │   Output)   │    │   Query)    │    │             │ │ │
+│  │  └─────────────┘    └──────┬──────┘    └─────────────┘ │ │
+│  │                            │                            │ │
+│  │                            ▼                            │ │
+│  │  ┌──────────────────────────────────────────────────┐  │ │
+│  │  │                  Domain Layer                     │  │ │
+│  │  │  Aggregate │ Entity │ Value Object │ Domain Event │  │ │
+│  │  └──────────────────────────────────────────────────┘  │ │
+│  └────────────────────────────────────────────────────────┘ │
+└─────────────────────────────────────────────────────────────┘
+```
+
+---
+
+### 設計模式總覽表
+
+| 分類 | 模式名稱 | 主要實踐位置 | 設計目的 |
+|------|----------|--------------|----------|
+| **Creational** | Factory Method | `PolicyHolder.create()`, `Policy.create()` | 封裝物件建立邏輯 |
+| **Creational** | Static Factory | Value Objects, Query classes | 提供語意化建構方式 |
+| **Creational** | Singleton | Spring `@Service`, `@Component` | 確保單一實例 |
+| **Structural** | Adapter | `*Adapter.java` classes | 連接不同介面 |
+| **Structural** | Mapper | `*Mapper.java` classes | 物件轉換 |
+| **Structural** | Facade | `PolicyHolderController` | 簡化複雜系統介面 |
+| **Behavioral** | Command | `*Command.java`, `*CommandHandler.java` | 封裝請求為物件 |
+| **Behavioral** | Strategy | `CommandHandler`, `QueryHandler` interfaces | 可替換的演算法 |
+| **Behavioral** | Observer | `DomainEventPublisher`, Spring Events | 事件通知機制 |
+| **Behavioral** | Template Method | `GlobalExceptionHandler` | 定義演算法骨架 |
+| **Architectural** | Repository | `*Repository.java` interfaces | 資料存取抽象 |
+| **Architectural** | Aggregate Root | `PolicyHolder.java` | 一致性邊界 |
+| **Architectural** | Value Object | `*Id.java`, `Money.java`, etc. | 不可變領域概念 |
+| **Architectural** | Domain Event | `*Event.java` classes | 捕捉領域變更 |
+| **Architectural** | CQRS | Command/Query separation | 讀寫分離 |
+| **Architectural** | Hexagonal | Ports & Adapters structure | 核心隔離 |
 
 ---
 
