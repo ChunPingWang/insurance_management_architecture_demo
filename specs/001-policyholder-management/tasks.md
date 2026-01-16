@@ -24,11 +24,11 @@ Test path: `src/test/java/com/insurance/policyholder/`
 
 **Purpose**: Project initialization and basic structure
 
-- [ ] T001 Create Spring Boot project with Gradle and dependencies per quickstart.md
-- [ ] T002 [P] Create package structure per plan.md (domain, application, infrastructure layers)
-- [ ] T003 [P] Configure application.yml with H2, JPA, and SpringDoc settings
-- [ ] T004 [P] Setup ArchUnit dependency for architecture tests in build.gradle
-- [ ] T005 [P] Setup Cucumber dependency for BDD tests in build.gradle
+- [x] T001 Create Spring Boot project with Gradle and dependencies per quickstart.md
+- [x] T002 [P] Create package structure per plan.md (domain, application, infrastructure layers)
+- [x] T003 [P] Configure application.yml with H2, JPA, and SpringDoc settings
+- [x] T004 [P] Setup ArchUnit dependency for architecture tests in build.gradle
+- [x] T005 [P] Setup Cucumber dependency for BDD tests in build.gradle
 
 ---
 
@@ -40,72 +40,72 @@ Test path: `src/test/java/com/insurance/policyholder/`
 
 ### Architecture Tests (First - TDD)
 
-- [ ] T006 Create ArchitectureTest for hexagonal architecture validation in src/test/java/com/insurance/policyholder/architecture/ArchitectureTest.java
+- [x] T006 Create ArchitectureTest for hexagonal architecture validation in src/test/java/com/insurance/policyholder/architecture/ArchitectureTest.java
 
 ### Domain Layer - Enums & Base Classes
 
-- [ ] T007 [P] Create Gender enum in src/main/java/com/insurance/policyholder/domain/model/enums/Gender.java
-- [ ] T008 [P] Create PolicyHolderStatus enum in src/main/java/com/insurance/policyholder/domain/model/enums/PolicyHolderStatus.java
-- [ ] T009 [P] Create PolicyType enum in src/main/java/com/insurance/policyholder/domain/model/enums/PolicyType.java
-- [ ] T010 [P] Create PolicyStatus enum in src/main/java/com/insurance/policyholder/domain/model/enums/PolicyStatus.java
-- [ ] T011 [P] Create DomainEvent base class in src/main/java/com/insurance/policyholder/domain/event/DomainEvent.java
-- [ ] T012 [P] Create DomainException base class in src/main/java/com/insurance/policyholder/domain/exception/DomainException.java
+- [x] T007 [P] Create Gender enum in src/main/java/com/insurance/policyholder/domain/model/enums/Gender.java
+- [x] T008 [P] Create PolicyHolderStatus enum in src/main/java/com/insurance/policyholder/domain/model/enums/PolicyHolderStatus.java
+- [x] T009 [P] Create PolicyType enum in src/main/java/com/insurance/policyholder/domain/model/enums/PolicyType.java
+- [x] T010 [P] Create PolicyStatus enum in src/main/java/com/insurance/policyholder/domain/model/enums/PolicyStatus.java
+- [x] T011 [P] Create DomainEvent base class in src/main/java/com/insurance/policyholder/domain/event/DomainEvent.java
+- [x] T012 [P] Create DomainException base class in src/main/java/com/insurance/policyholder/domain/exception/DomainException.java
 
 ### Domain Layer - Value Objects (with tests first)
 
-- [ ] T013 [P] Create PolicyHolderIdTest in src/test/java/com/insurance/policyholder/domain/model/valueobject/PolicyHolderIdTest.java
-- [ ] T014 [P] Create NationalIdTest with Taiwan ID validation in src/test/java/com/insurance/policyholder/domain/model/valueobject/NationalIdTest.java
-- [ ] T015 [P] Create AddressTest in src/test/java/com/insurance/policyholder/domain/model/valueobject/AddressTest.java
-- [ ] T016 [P] Create MoneyTest in src/test/java/com/insurance/policyholder/domain/model/valueobject/MoneyTest.java
-- [ ] T017 [P] Create PersonalInfoTest in src/test/java/com/insurance/policyholder/domain/model/valueobject/PersonalInfoTest.java
-- [ ] T018 [P] Create ContactInfoTest in src/test/java/com/insurance/policyholder/domain/model/valueobject/ContactInfoTest.java
-- [ ] T019 [P] Implement PolicyHolderId value object in src/main/java/com/insurance/policyholder/domain/model/valueobject/PolicyHolderId.java
-- [ ] T020 [P] Implement NationalId value object with Taiwan ID validation in src/main/java/com/insurance/policyholder/domain/model/valueobject/NationalId.java
-- [ ] T021 [P] Implement Address value object in src/main/java/com/insurance/policyholder/domain/model/valueobject/Address.java
-- [ ] T022 [P] Implement Money value object in src/main/java/com/insurance/policyholder/domain/model/valueobject/Money.java
-- [ ] T023 [P] Implement PersonalInfo value object in src/main/java/com/insurance/policyholder/domain/model/valueobject/PersonalInfo.java
-- [ ] T024 [P] Implement ContactInfo value object in src/main/java/com/insurance/policyholder/domain/model/valueobject/ContactInfo.java
-- [ ] T025 [P] Create PolicyId value object in src/main/java/com/insurance/policyholder/domain/model/valueobject/PolicyId.java
+- [x] T013 [P] Create PolicyHolderIdTest in src/test/java/com/insurance/policyholder/domain/model/valueobject/PolicyHolderIdTest.java
+- [x] T014 [P] Create NationalIdTest with Taiwan ID validation in src/test/java/com/insurance/policyholder/domain/model/valueobject/NationalIdTest.java
+- [x] T015 [P] Create AddressTest in src/test/java/com/insurance/policyholder/domain/model/valueobject/AddressTest.java
+- [x] T016 [P] Create MoneyTest in src/test/java/com/insurance/policyholder/domain/model/valueobject/MoneyTest.java
+- [x] T017 [P] Create PersonalInfoTest in src/test/java/com/insurance/policyholder/domain/model/valueobject/PersonalInfoTest.java
+- [x] T018 [P] Create ContactInfoTest in src/test/java/com/insurance/policyholder/domain/model/valueobject/ContactInfoTest.java
+- [x] T019 [P] Implement PolicyHolderId value object in src/main/java/com/insurance/policyholder/domain/model/valueobject/PolicyHolderId.java
+- [x] T020 [P] Implement NationalId value object with Taiwan ID validation in src/main/java/com/insurance/policyholder/domain/model/valueobject/NationalId.java
+- [x] T021 [P] Implement Address value object in src/main/java/com/insurance/policyholder/domain/model/valueobject/Address.java
+- [x] T022 [P] Implement Money value object in src/main/java/com/insurance/policyholder/domain/model/valueobject/Money.java
+- [x] T023 [P] Implement PersonalInfo value object in src/main/java/com/insurance/policyholder/domain/model/valueobject/PersonalInfo.java
+- [x] T024 [P] Implement ContactInfo value object in src/main/java/com/insurance/policyholder/domain/model/valueobject/ContactInfo.java
+- [x] T025 [P] Create PolicyId value object in src/main/java/com/insurance/policyholder/domain/model/valueobject/PolicyId.java
 
 ### Application Layer - Ports (Interfaces)
 
-- [ ] T026 [P] Create CommandHandler interface in src/main/java/com/insurance/policyholder/application/port/input/CommandHandler.java
-- [ ] T027 [P] Create QueryHandler interface in src/main/java/com/insurance/policyholder/application/port/input/QueryHandler.java
-- [ ] T028 [P] Create PolicyHolderRepository port in src/main/java/com/insurance/policyholder/application/port/output/PolicyHolderRepository.java
-- [ ] T029 [P] Create PolicyHolderQueryRepository port in src/main/java/com/insurance/policyholder/application/port/output/PolicyHolderQueryRepository.java
-- [ ] T030 [P] Create DomainEventPublisher port in src/main/java/com/insurance/policyholder/application/port/output/DomainEventPublisher.java
-- [ ] T031 [P] Create EventStore port in src/main/java/com/insurance/policyholder/application/port/output/EventStore.java
+- [x] T026 [P] Create CommandHandler interface in src/main/java/com/insurance/policyholder/application/port/input/CommandHandler.java
+- [x] T027 [P] Create QueryHandler interface in src/main/java/com/insurance/policyholder/application/port/input/QueryHandler.java
+- [x] T028 [P] Create PolicyHolderRepository port in src/main/java/com/insurance/policyholder/application/port/output/PolicyHolderRepository.java
+- [x] T029 [P] Create PolicyHolderQueryRepository port in src/main/java/com/insurance/policyholder/application/port/output/PolicyHolderQueryRepository.java
+- [x] T030 [P] Create DomainEventPublisher port in src/main/java/com/insurance/policyholder/application/port/output/DomainEventPublisher.java
+- [x] T031 [P] Create EventStore port in src/main/java/com/insurance/policyholder/application/port/output/EventStore.java
 
 ### Infrastructure Layer - Common Components
 
-- [ ] T032 Create GlobalExceptionHandler in src/main/java/com/insurance/policyholder/infrastructure/exception/GlobalExceptionHandler.java
-- [ ] T033 [P] Create JPA configuration in src/main/java/com/insurance/policyholder/infrastructure/config/JpaConfig.java
-- [ ] T034 [P] Create ApiResponse wrapper in src/main/java/com/insurance/policyholder/infrastructure/adapter/input/rest/response/ApiResponse.java
-- [ ] T035 [P] Create ErrorResponse in src/main/java/com/insurance/policyholder/infrastructure/adapter/input/rest/response/ErrorResponse.java
+- [x] T032 Create GlobalExceptionHandler in src/main/java/com/insurance/policyholder/infrastructure/exception/GlobalExceptionHandler.java
+- [x] T033 [P] Create JPA configuration in src/main/java/com/insurance/policyholder/infrastructure/config/JpaConfig.java
+- [x] T034 [P] Create ApiResponse wrapper in src/main/java/com/insurance/policyholder/infrastructure/adapter/input/rest/response/ApiResponse.java
+- [x] T035 [P] Create ErrorResponse in src/main/java/com/insurance/policyholder/infrastructure/adapter/input/rest/response/ErrorResponse.java
 
 ### Infrastructure Layer - Persistence Entities
 
-- [ ] T036 [P] Create PolicyHolderJpaEntity in src/main/java/com/insurance/policyholder/infrastructure/adapter/output/persistence/entity/PolicyHolderJpaEntity.java
-- [ ] T037 [P] Create PolicyJpaEntity in src/main/java/com/insurance/policyholder/infrastructure/adapter/output/persistence/entity/PolicyJpaEntity.java
-- [ ] T038 [P] Create DomainEventJpaEntity in src/main/java/com/insurance/policyholder/infrastructure/adapter/output/persistence/entity/DomainEventJpaEntity.java
+- [x] T036 [P] Create PolicyHolderJpaEntity in src/main/java/com/insurance/policyholder/infrastructure/adapter/output/persistence/entity/PolicyHolderJpaEntity.java
+- [x] T037 [P] Create PolicyJpaEntity in src/main/java/com/insurance/policyholder/infrastructure/adapter/output/persistence/entity/PolicyJpaEntity.java
+- [x] T038 [P] Create DomainEventJpaEntity in src/main/java/com/insurance/policyholder/infrastructure/adapter/output/persistence/entity/DomainEventJpaEntity.java
 
 ### Infrastructure Layer - JPA Repositories
 
-- [ ] T039 [P] Create PolicyHolderJpaRepository in src/main/java/com/insurance/policyholder/infrastructure/adapter/output/persistence/repository/PolicyHolderJpaRepository.java
-- [ ] T040 [P] Create PolicyJpaRepository in src/main/java/com/insurance/policyholder/infrastructure/adapter/output/persistence/repository/PolicyJpaRepository.java
-- [ ] T041 [P] Create DomainEventJpaRepository in src/main/java/com/insurance/policyholder/infrastructure/adapter/output/persistence/repository/DomainEventJpaRepository.java
+- [x] T039 [P] Create PolicyHolderJpaRepository in src/main/java/com/insurance/policyholder/infrastructure/adapter/output/persistence/repository/PolicyHolderJpaRepository.java
+- [x] T040 [P] Create PolicyJpaRepository in src/main/java/com/insurance/policyholder/infrastructure/adapter/output/persistence/repository/PolicyJpaRepository.java
+- [x] T041 [P] Create DomainEventJpaRepository in src/main/java/com/insurance/policyholder/infrastructure/adapter/output/persistence/repository/DomainEventJpaRepository.java
 
 ### Infrastructure Layer - Mappers
 
-- [ ] T042 [P] Create PolicyHolderMapper in src/main/java/com/insurance/policyholder/infrastructure/adapter/output/persistence/mapper/PolicyHolderMapper.java
-- [ ] T043 [P] Create PolicyMapper in src/main/java/com/insurance/policyholder/infrastructure/adapter/output/persistence/mapper/PolicyMapper.java
+- [x] T042 [P] Create PolicyHolderMapper in src/main/java/com/insurance/policyholder/infrastructure/adapter/output/persistence/mapper/PolicyHolderMapper.java
+- [x] T043 [P] Create PolicyMapper in src/main/java/com/insurance/policyholder/infrastructure/adapter/output/persistence/mapper/PolicyMapper.java
 
 ### Infrastructure Layer - Repository Adapters
 
-- [ ] T044 Create PolicyHolderRepositoryAdapter in src/main/java/com/insurance/policyholder/infrastructure/adapter/output/persistence/adapter/PolicyHolderRepositoryAdapter.java
-- [ ] T045 Create PolicyHolderQueryRepositoryAdapter in src/main/java/com/insurance/policyholder/infrastructure/adapter/output/persistence/adapter/PolicyHolderQueryRepositoryAdapter.java
-- [ ] T046 Create EventStoreAdapter in src/main/java/com/insurance/policyholder/infrastructure/adapter/output/event/EventStoreAdapter.java
-- [ ] T047 Create DomainEventPublisherAdapter in src/main/java/com/insurance/policyholder/infrastructure/adapter/output/event/DomainEventPublisherAdapter.java
+- [x] T044 Create PolicyHolderRepositoryAdapter in src/main/java/com/insurance/policyholder/infrastructure/adapter/output/persistence/adapter/PolicyHolderRepositoryAdapter.java
+- [x] T045 Create PolicyHolderQueryRepositoryAdapter in src/main/java/com/insurance/policyholder/infrastructure/adapter/output/persistence/adapter/PolicyHolderQueryRepositoryAdapter.java
+- [x] T046 Create EventStoreAdapter in src/main/java/com/insurance/policyholder/infrastructure/adapter/output/event/EventStoreAdapter.java
+- [x] T047 Create DomainEventPublisherAdapter in src/main/java/com/insurance/policyholder/infrastructure/adapter/output/event/DomainEventPublisherAdapter.java
 
 **Checkpoint**: Foundation ready - user story implementation can now begin
 
@@ -119,30 +119,30 @@ Test path: `src/test/java/com/insurance/policyholder/`
 
 ### Tests for User Story 1
 
-- [ ] T048 [P] [US1] Create PolicyHolderTest for aggregate root in src/test/java/com/insurance/policyholder/domain/model/aggregate/PolicyHolderTest.java
-- [ ] T049 [P] [US1] Create CreatePolicyHolderCommandHandlerTest in src/test/java/com/insurance/policyholder/application/commandhandler/CreatePolicyHolderCommandHandlerTest.java
-- [ ] T050 [P] [US1] Create PolicyHolderControllerCreateTest in src/test/java/com/insurance/policyholder/infrastructure/adapter/input/rest/PolicyHolderControllerCreateTest.java
-- [ ] T051 [US1] Create Cucumber feature for US1 in src/test/resources/features/create-policyholder.feature
+- [x] T048 [P] [US1] Create PolicyHolderTest for aggregate root in src/test/java/com/insurance/policyholder/domain/model/aggregate/PolicyHolderTest.java
+- [x] T049 [P] [US1] Create CreatePolicyHolderCommandHandlerTest in src/test/java/com/insurance/policyholder/application/commandhandler/CreatePolicyHolderCommandHandlerTest.java
+- [x] T050 [P] [US1] Create PolicyHolderControllerCreateTest in src/test/java/com/insurance/policyholder/infrastructure/adapter/input/rest/PolicyHolderControllerCreateTest.java
+- [x] T051 [US1] Create Cucumber feature for US1 in src/test/resources/features/create-policyholder.feature
 
 ### Domain Layer for User Story 1
 
-- [ ] T052 [US1] Create PolicyHolder aggregate root in src/main/java/com/insurance/policyholder/domain/model/aggregate/PolicyHolder.java
-- [ ] T053 [US1] Create PolicyHolderCreated event in src/main/java/com/insurance/policyholder/domain/event/PolicyHolderCreated.java
+- [x] T052 [US1] Create PolicyHolder aggregate root in src/main/java/com/insurance/policyholder/domain/model/aggregate/PolicyHolder.java
+- [x] T053 [US1] Create PolicyHolderCreated event in src/main/java/com/insurance/policyholder/domain/event/PolicyHolderCreated.java
 
 ### Application Layer for User Story 1
 
-- [ ] T054 [P] [US1] Create CreatePolicyHolderCommand in src/main/java/com/insurance/policyholder/application/command/CreatePolicyHolderCommand.java
-- [ ] T055 [P] [US1] Create PolicyHolderReadModel in src/main/java/com/insurance/policyholder/application/readmodel/PolicyHolderReadModel.java
-- [ ] T056 [US1] Create CreatePolicyHolderCommandHandler in src/main/java/com/insurance/policyholder/application/commandhandler/CreatePolicyHolderCommandHandler.java
+- [x] T054 [P] [US1] Create CreatePolicyHolderCommand in src/main/java/com/insurance/policyholder/application/command/CreatePolicyHolderCommand.java
+- [x] T055 [P] [US1] Create PolicyHolderReadModel in src/main/java/com/insurance/policyholder/application/readmodel/PolicyHolderReadModel.java
+- [x] T056 [US1] Create CreatePolicyHolderCommandHandler in src/main/java/com/insurance/policyholder/application/commandhandler/CreatePolicyHolderCommandHandler.java
 
 ### Infrastructure Layer for User Story 1
 
-- [ ] T057 [P] [US1] Create CreatePolicyHolderRequest in src/main/java/com/insurance/policyholder/infrastructure/adapter/input/rest/request/CreatePolicyHolderRequest.java
-- [ ] T058 [P] [US1] Create AddressRequest in src/main/java/com/insurance/policyholder/infrastructure/adapter/input/rest/request/AddressRequest.java
-- [ ] T059 [P] [US1] Create PolicyHolderResponse in src/main/java/com/insurance/policyholder/infrastructure/adapter/input/rest/response/PolicyHolderResponse.java
-- [ ] T060 [P] [US1] Create AddressResponse in src/main/java/com/insurance/policyholder/infrastructure/adapter/input/rest/response/AddressResponse.java
-- [ ] T061 [P] [US1] Create request/response mapper in src/main/java/com/insurance/policyholder/infrastructure/adapter/input/rest/mapper/PolicyHolderRestMapper.java
-- [ ] T062 [US1] Implement createPolicyHolder endpoint in PolicyHolderController in src/main/java/com/insurance/policyholder/infrastructure/adapter/input/rest/PolicyHolderController.java
+- [x] T057 [P] [US1] Create CreatePolicyHolderRequest in src/main/java/com/insurance/policyholder/infrastructure/adapter/input/rest/request/CreatePolicyHolderRequest.java
+- [x] T058 [P] [US1] Create AddressRequest in src/main/java/com/insurance/policyholder/infrastructure/adapter/input/rest/request/AddressRequest.java
+- [x] T059 [P] [US1] Create PolicyHolderResponse in src/main/java/com/insurance/policyholder/infrastructure/adapter/input/rest/response/PolicyHolderResponse.java
+- [x] T060 [P] [US1] Create AddressResponse in src/main/java/com/insurance/policyholder/infrastructure/adapter/input/rest/response/AddressResponse.java
+- [x] T061 [P] [US1] Create request/response mapper in src/main/java/com/insurance/policyholder/infrastructure/adapter/input/rest/mapper/PolicyHolderRestMapper.java
+- [x] T062 [US1] Implement createPolicyHolder endpoint in PolicyHolderController in src/main/java/com/insurance/policyholder/infrastructure/adapter/input/rest/PolicyHolderController.java
 
 **Checkpoint**: User Story 1 (新增保戶) fully functional and testable independently
 
@@ -156,26 +156,26 @@ Test path: `src/test/java/com/insurance/policyholder/`
 
 ### Tests for User Story 2
 
-- [ ] T063 [P] [US2] Create GetPolicyHolderQueryHandlerTest in src/test/java/com/insurance/policyholder/application/queryhandler/GetPolicyHolderQueryHandlerTest.java
-- [ ] T064 [P] [US2] Create SearchPolicyHoldersQueryHandlerTest in src/test/java/com/insurance/policyholder/application/queryhandler/SearchPolicyHoldersQueryHandlerTest.java
-- [ ] T065 [P] [US2] Create PolicyHolderControllerQueryTest in src/test/java/com/insurance/policyholder/infrastructure/adapter/input/rest/PolicyHolderControllerQueryTest.java
-- [ ] T066 [US2] Create Cucumber feature for US2 in src/test/resources/features/query-policyholder.feature
+- [x] T063 [P] [US2] Create GetPolicyHolderQueryHandlerTest in src/test/java/com/insurance/policyholder/application/queryhandler/GetPolicyHolderQueryHandlerTest.java
+- [x] T064 [P] [US2] Create SearchPolicyHoldersQueryHandlerTest in src/test/java/com/insurance/policyholder/application/queryhandler/SearchPolicyHoldersQueryHandlerTest.java
+- [x] T065 [P] [US2] Create PolicyHolderControllerQueryTest in src/test/java/com/insurance/policyholder/infrastructure/adapter/input/rest/PolicyHolderControllerQueryTest.java
+- [x] T066 [US2] Create Cucumber feature for US2 in src/test/resources/features/query-policyholder.feature
 
 ### Application Layer for User Story 2
 
-- [ ] T067 [P] [US2] Create GetPolicyHolderQuery in src/main/java/com/insurance/policyholder/application/query/GetPolicyHolderQuery.java
-- [ ] T068 [P] [US2] Create GetPolicyHolderByNationalIdQuery in src/main/java/com/insurance/policyholder/application/query/GetPolicyHolderByNationalIdQuery.java
-- [ ] T069 [P] [US2] Create SearchPolicyHoldersQuery in src/main/java/com/insurance/policyholder/application/query/SearchPolicyHoldersQuery.java
-- [ ] T070 [P] [US2] Create PolicyHolderListItemReadModel in src/main/java/com/insurance/policyholder/application/readmodel/PolicyHolderListItemReadModel.java
-- [ ] T071 [US2] Create GetPolicyHolderQueryHandler in src/main/java/com/insurance/policyholder/application/queryhandler/GetPolicyHolderQueryHandler.java
-- [ ] T072 [US2] Create SearchPolicyHoldersQueryHandler in src/main/java/com/insurance/policyholder/application/queryhandler/SearchPolicyHoldersQueryHandler.java
+- [x] T067 [P] [US2] Create GetPolicyHolderQuery in src/main/java/com/insurance/policyholder/application/query/GetPolicyHolderQuery.java
+- [x] T068 [P] [US2] Create GetPolicyHolderByNationalIdQuery in src/main/java/com/insurance/policyholder/application/query/GetPolicyHolderByNationalIdQuery.java
+- [x] T069 [P] [US2] Create SearchPolicyHoldersQuery in src/main/java/com/insurance/policyholder/application/query/SearchPolicyHoldersQuery.java
+- [x] T070 [P] [US2] Create PolicyHolderListItemReadModel in src/main/java/com/insurance/policyholder/application/readmodel/PolicyHolderListItemReadModel.java
+- [x] T071 [US2] Create GetPolicyHolderQueryHandler in src/main/java/com/insurance/policyholder/application/queryhandler/GetPolicyHolderQueryHandler.java
+- [x] T072 [US2] Create SearchPolicyHoldersQueryHandler in src/main/java/com/insurance/policyholder/application/queryhandler/SearchPolicyHoldersQueryHandler.java
 
 ### Infrastructure Layer for User Story 2
 
-- [ ] T073 [P] [US2] Create PolicyHolderListItemResponse in src/main/java/com/insurance/policyholder/infrastructure/adapter/input/rest/response/PolicyHolderListItemResponse.java
-- [ ] T074 [P] [US2] Create PageResponse wrapper in src/main/java/com/insurance/policyholder/infrastructure/adapter/input/rest/response/PageResponse.java
-- [ ] T075 [US2] Implement getPolicyHolder endpoint in PolicyHolderController
-- [ ] T076 [US2] Implement searchPolicyHolders endpoint in PolicyHolderController
+- [x] T073 [P] [US2] Create PolicyHolderListItemResponse in src/main/java/com/insurance/policyholder/infrastructure/adapter/input/rest/response/PolicyHolderListItemResponse.java
+- [x] T074 [P] [US2] Create PageResponse wrapper in src/main/java/com/insurance/policyholder/infrastructure/adapter/input/rest/response/PageResponse.java
+- [x] T075 [US2] Implement getPolicyHolder endpoint in PolicyHolderController
+- [x] T076 [US2] Implement searchPolicyHolders endpoint in PolicyHolderController
 
 **Checkpoint**: User Story 2 (查詢保戶) fully functional and testable independently
 
@@ -189,24 +189,24 @@ Test path: `src/test/java/com/insurance/policyholder/`
 
 ### Tests for User Story 3
 
-- [ ] T077 [P] [US3] Create UpdatePolicyHolderCommandHandlerTest in src/test/java/com/insurance/policyholder/application/commandhandler/UpdatePolicyHolderCommandHandlerTest.java
-- [ ] T078 [P] [US3] Create PolicyHolderControllerUpdateTest in src/test/java/com/insurance/policyholder/infrastructure/adapter/input/rest/PolicyHolderControllerUpdateTest.java
-- [ ] T079 [US3] Create Cucumber feature for US3 in src/test/resources/features/update-policyholder.feature
+- [x] T077 [P] [US3] Create UpdatePolicyHolderCommandHandlerTest in src/test/java/com/insurance/policyholder/application/commandhandler/UpdatePolicyHolderCommandHandlerTest.java
+- [x] T078 [P] [US3] Create PolicyHolderControllerUpdateTest in src/test/java/com/insurance/policyholder/infrastructure/adapter/input/rest/PolicyHolderControllerUpdateTest.java
+- [x] T079 [US3] Create Cucumber feature for US3 in src/test/resources/features/update-policyholder.feature
 
 ### Domain Layer for User Story 3
 
-- [ ] T080 [US3] Add update methods to PolicyHolder aggregate (updateContactInfo, updateAddress)
-- [ ] T081 [US3] Create PolicyHolderUpdated event in src/main/java/com/insurance/policyholder/domain/event/PolicyHolderUpdated.java
+- [x] T080 [US3] Add update methods to PolicyHolder aggregate (updateContactInfo, updateAddress)
+- [x] T081 [US3] Create PolicyHolderUpdated event in src/main/java/com/insurance/policyholder/domain/event/PolicyHolderUpdated.java
 
 ### Application Layer for User Story 3
 
-- [ ] T082 [P] [US3] Create UpdatePolicyHolderCommand in src/main/java/com/insurance/policyholder/application/command/UpdatePolicyHolderCommand.java
-- [ ] T083 [US3] Create UpdatePolicyHolderCommandHandler in src/main/java/com/insurance/policyholder/application/commandhandler/UpdatePolicyHolderCommandHandler.java
+- [x] T082 [P] [US3] Create UpdatePolicyHolderCommand in src/main/java/com/insurance/policyholder/application/command/UpdatePolicyHolderCommand.java
+- [x] T083 [US3] Create UpdatePolicyHolderCommandHandler in src/main/java/com/insurance/policyholder/application/commandhandler/UpdatePolicyHolderCommandHandler.java
 
 ### Infrastructure Layer for User Story 3
 
-- [ ] T084 [P] [US3] Create UpdatePolicyHolderRequest in src/main/java/com/insurance/policyholder/infrastructure/adapter/input/rest/request/UpdatePolicyHolderRequest.java
-- [ ] T085 [US3] Implement updatePolicyHolder endpoint in PolicyHolderController
+- [x] T084 [P] [US3] Create UpdatePolicyHolderRequest in src/main/java/com/insurance/policyholder/infrastructure/adapter/input/rest/request/UpdatePolicyHolderRequest.java
+- [x] T085 [US3] Implement updatePolicyHolder endpoint in PolicyHolderController
 
 **Checkpoint**: User Story 3 (修改保戶) fully functional and testable independently
 
@@ -220,23 +220,23 @@ Test path: `src/test/java/com/insurance/policyholder/`
 
 ### Tests for User Story 4
 
-- [ ] T086 [P] [US4] Create DeletePolicyHolderCommandHandlerTest in src/test/java/com/insurance/policyholder/application/commandhandler/DeletePolicyHolderCommandHandlerTest.java
-- [ ] T087 [P] [US4] Create PolicyHolderControllerDeleteTest in src/test/java/com/insurance/policyholder/infrastructure/adapter/input/rest/PolicyHolderControllerDeleteTest.java
-- [ ] T088 [US4] Create Cucumber feature for US4 in src/test/resources/features/delete-policyholder.feature
+- [x] T086 [P] [US4] Create DeletePolicyHolderCommandHandlerTest in src/test/java/com/insurance/policyholder/application/commandhandler/DeletePolicyHolderCommandHandlerTest.java
+- [x] T087 [P] [US4] Create PolicyHolderControllerDeleteTest in src/test/java/com/insurance/policyholder/infrastructure/adapter/input/rest/PolicyHolderControllerDeleteTest.java
+- [x] T088 [US4] Create Cucumber feature for US4 in src/test/resources/features/delete-policyholder.feature
 
 ### Domain Layer for User Story 4
 
-- [ ] T089 [US4] Add deactivate method to PolicyHolder aggregate
-- [ ] T090 [US4] Create PolicyHolderDeleted event in src/main/java/com/insurance/policyholder/domain/event/PolicyHolderDeleted.java
+- [x] T089 [US4] Add deactivate method to PolicyHolder aggregate
+- [x] T090 [US4] Create PolicyHolderDeleted event in src/main/java/com/insurance/policyholder/domain/event/PolicyHolderDeleted.java
 
 ### Application Layer for User Story 4
 
-- [ ] T091 [P] [US4] Create DeletePolicyHolderCommand in src/main/java/com/insurance/policyholder/application/command/DeletePolicyHolderCommand.java
-- [ ] T092 [US4] Create DeletePolicyHolderCommandHandler in src/main/java/com/insurance/policyholder/application/commandhandler/DeletePolicyHolderCommandHandler.java
+- [x] T091 [P] [US4] Create DeletePolicyHolderCommand in src/main/java/com/insurance/policyholder/application/command/DeletePolicyHolderCommand.java
+- [x] T092 [US4] Create DeletePolicyHolderCommandHandler in src/main/java/com/insurance/policyholder/application/commandhandler/DeletePolicyHolderCommandHandler.java
 
 ### Infrastructure Layer for User Story 4
 
-- [ ] T093 [US4] Implement deletePolicyHolder endpoint in PolicyHolderController
+- [x] T093 [US4] Implement deletePolicyHolder endpoint in PolicyHolderController
 
 **Checkpoint**: User Story 4 (刪除保戶) fully functional and testable independently
 
