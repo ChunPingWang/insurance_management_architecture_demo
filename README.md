@@ -2,8 +2,8 @@
 
 [![Java](https://img.shields.io/badge/Java-17%2B-orange)](https://openjdk.java.net/)
 [![Spring Boot](https://img.shields.io/badge/Spring%20Boot-3.x-green)](https://spring.io/projects/spring-boot)
-[![Tests](https://img.shields.io/badge/Tests-209%20passing-brightgreen)]()
-[![Coverage](https://img.shields.io/badge/Coverage-81%25-brightgreen)]()
+[![Tests](https://img.shields.io/badge/Tests-549%20passing-brightgreen)]()
+[![Coverage](https://img.shields.io/badge/Coverage-95%25-brightgreen)]()
 [![License](https://img.shields.io/badge/License-MIT-blue)](LICENSE)
 
 人壽保險保戶基本資料管理系統，提供保戶與保單的完整生命週期管理。
@@ -13,6 +13,11 @@
 ## 目錄
 
 - [專案概述](#專案概述)
+- [架構原理詳細說明](#架構原理詳細說明)
+  - [SOLID 原則](#solid-原則)
+  - [CQRS 模式](#cqrs-模式-command-query-responsibility-segregation)
+  - [Event Store 模式](#event-store-模式)
+  - [BDD 測試方法論](#bdd-測試方法論-behavior-driven-development)
 - [架構設計圖](#架構設計圖)
   - [六角形架構圖](#六角形架構圖)
   - [系統元件圖](#系統元件圖)
@@ -54,11 +59,867 @@
 - ✅ Domain-Driven Design 戰術設計模式
 - ✅ 六角形架構（端口與適配器）
 - ✅ CQRS Level 2（讀寫模型分離）
-- ✅ 領域事件持久化
+- ✅ 領域事件持久化 (Event Store)
 - ✅ SOLID 原則
 - ✅ ArchUnit 架構測試
-- ✅ TDD 測試驅動開發
+- ✅ TDD/BDD 測試驅動開發
 - ✅ 台灣身分證字號驗證
+
+---
+
+## 架構原理詳細說明
+
+### SOLID 原則
+
+本專案嚴格遵循 **SOLID** 五大設計原則，確保程式碼的可維護性、可擴展性與可測試性。
+
+#### 1. 單一職責原則 (Single Responsibility Principle, SRP)
+
+> 一個類別應該只有一個引起它變化的原因。
+
+**專案實踐:**
+
+```
+✅ Command Handler 只負責處理單一命令
+   └── CreatePolicyHolderCommandHandler.java  → 只處理「建立保戶」
+   └── UpdatePolicyHolderCommandHandler.java  → 只處理「更新保戶」
+   └── DeletePolicyHolderCommandHandler.java  → 只處理「刪除保戶」
+
+✅ Value Object 各自封裝特定的業務規則
+   └── NationalId.java    → 只負責身分證字號驗證
+   └── Money.java         → 只負責金額運算
+   └── Address.java       → 只負責地址相關邏輯
+
+✅ Mapper 只負責轉換
+   └── PolicyHolderMapper.java  → Domain ↔ JPA Entity
+   └── ResponseMapper.java      → Domain → Response DTO
+```
+
+**程式碼範例:**
+
+```java
+// ❌ 錯誤：一個類別做太多事情
+public class PolicyHolderService {
+    public void create(...) { /* 建立 */ }
+    public void update(...) { /* 更新 */ }
+    public void delete(...) { /* 刪除 */ }
+    public void query(...) { /* 查詢 */ }
+    public void validateNationalId(...) { /* 驗證 */ }
+    public void sendEmail(...) { /* 發信 */ }
+}
+
+// ✅ 正確：每個類別只有單一職責
+public class CreatePolicyHolderCommandHandler {
+    public PolicyHolderReadModel handle(CreatePolicyHolderCommand command) {
+        // 只負責建立保戶的業務邏輯
+    }
+}
+```
+
+#### 2. 開放封閉原則 (Open/Closed Principle, OCP)
+
+> 軟體實體應該對擴展開放，對修改封閉。
+
+**專案實踐:**
+
+```
+✅ 使用介面定義 Port，新增實作不需修改既有程式碼
+   └── PolicyHolderRepository (interface)
+       ├── PolicyHolderRepositoryAdapter (JPA 實作)
+       └── 未來可新增: PolicyHolderRedisAdapter (快取實作)
+
+✅ 領域事件可擴展而不修改 Aggregate
+   └── DomainEvent (abstract)
+       ├── PolicyHolderCreated
+       ├── PolicyHolderUpdated
+       ├── PolicyHolderDeleted
+       └── PolicyAdded
+```
+
+**程式碼範例:**
+
+```java
+// 介面定義（封閉）
+public interface PolicyHolderRepository {
+    PolicyHolder save(PolicyHolder policyHolder);
+    Optional<PolicyHolder> findById(PolicyHolderId id);
+}
+
+// 新增實作（開放）- 不修改既有程式碼
+@Component
+public class PolicyHolderJpaAdapter implements PolicyHolderRepository {
+    // JPA 實作
+}
+
+// 未來可新增 Redis 實作
+@Component
+@Profile("cache")
+public class PolicyHolderCacheAdapter implements PolicyHolderRepository {
+    // Redis 實作 - 完全不影響既有程式碼
+}
+```
+
+#### 3. 里氏替換原則 (Liskov Substitution Principle, LSP)
+
+> 子類別必須能夠替換其基底類別。
+
+**專案實踐:**
+
+```
+✅ 所有 DomainEvent 子類別都能被 DomainEventPublisher 處理
+   └── DomainEventPublisher.publish(DomainEvent event)
+       └── 可接受任何 DomainEvent 子類別
+
+✅ Repository 介面的任何實作都可以互換使用
+   └── CommandHandler 依賴 PolicyHolderRepository 介面
+       └── 無論是 JPA、MongoDB 或 Mock 實作都可以正常運作
+```
+
+**程式碼範例:**
+
+```java
+// 基底類別定義契約
+public abstract class DomainEvent {
+    public abstract String getEventType();
+    public abstract String getAggregateId();
+    public abstract LocalDateTime getOccurredOn();
+}
+
+// 子類別遵循契約
+public class PolicyHolderCreated extends DomainEvent {
+    @Override
+    public String getEventType() { return "PolicyHolderCreated"; }
+    // ... 完全符合基底類別的契約
+}
+
+// 使用端可以替換任何子類別
+public void publishAll(List<DomainEvent> events) {
+    events.forEach(this::publish);  // 任何 DomainEvent 子類別都能正常運作
+}
+```
+
+#### 4. 介面隔離原則 (Interface Segregation Principle, ISP)
+
+> 客戶端不應該被強迫依賴它不使用的方法。
+
+**專案實踐:**
+
+```
+✅ 讀寫分離的 Repository 介面
+   └── PolicyHolderRepository      → 寫入操作 (save, findById)
+   └── PolicyHolderQueryRepository → 讀取操作 (search, findAll)
+
+✅ 細粒度的 Handler 介面
+   └── CommandHandler<C, R>  → 只定義 handle 方法
+   └── QueryHandler<Q, R>    → 只定義 handle 方法
+```
+
+**程式碼範例:**
+
+```java
+// ❌ 錯誤：大而全的介面
+public interface PolicyHolderRepository {
+    void save(...);
+    void delete(...);
+    PolicyHolder findById(...);
+    Page<PolicyHolder> findAll(...);
+    Page<PolicyHolder> searchByName(...);
+    long count();
+    // ... 更多方法
+}
+
+// ✅ 正確：細粒度的介面
+public interface PolicyHolderRepository {       // 寫入端使用
+    PolicyHolder save(PolicyHolder policyHolder);
+    Optional<PolicyHolder> findById(PolicyHolderId id);
+}
+
+public interface PolicyHolderQueryRepository {  // 讀取端使用
+    Page<PolicyHolderListItemReadModel> findAll(Pageable pageable);
+    Page<PolicyHolderListItemReadModel> searchByName(String name, Pageable pageable);
+}
+```
+
+#### 5. 依賴反轉原則 (Dependency Inversion Principle, DIP)
+
+> 高層模組不應該依賴低層模組，兩者都應該依賴抽象。
+
+**專案實踐:**
+
+```
+✅ Application Layer 定義介面，Infrastructure Layer 實作
+   └── Application Layer:
+       └── PolicyHolderRepository (interface)    ← 定義 Port
+       └── DomainEventPublisher (interface)      ← 定義 Port
+   └── Infrastructure Layer:
+       └── PolicyHolderRepositoryAdapter         → 實作 Port
+       └── DomainEventPublisherAdapter           → 實作 Port
+
+✅ 依賴注入方向
+   └── Controller → Handler → Repository (interface) ← Adapter
+```
+
+**程式碼範例:**
+
+```java
+// Application Layer 定義抽象（高層模組）
+public interface PolicyHolderRepository {
+    PolicyHolder save(PolicyHolder policyHolder);
+    Optional<PolicyHolder> findById(PolicyHolderId id);
+}
+
+// Application Layer 依賴抽象
+@Service
+public class CreatePolicyHolderCommandHandler {
+    private final PolicyHolderRepository repository;  // 依賴介面，而非具體實作
+
+    public CreatePolicyHolderCommandHandler(PolicyHolderRepository repository) {
+        this.repository = repository;
+    }
+}
+
+// Infrastructure Layer 實作抽象（低層模組）
+@Component
+public class PolicyHolderRepositoryAdapter implements PolicyHolderRepository {
+    private final PolicyHolderJpaRepository jpaRepository;
+    // 實作細節...
+}
+```
+
+**SOLID 原則在各層的體現:**
+
+```mermaid
+graph TB
+    subgraph "SOLID 在六角形架構的應用"
+        subgraph DIP["依賴反轉 (DIP)"]
+            AppLayer["Application Layer<br/>定義 Port 介面"]
+            InfraLayer["Infrastructure Layer<br/>實作 Adapter"]
+            AppLayer -.->|定義| Port["Port Interface"]
+            InfraLayer -->|實作| Port
+        end
+
+        subgraph ISP["介面隔離 (ISP)"]
+            WriteRepo["PolicyHolderRepository<br/>(寫入操作)"]
+            ReadRepo["PolicyHolderQueryRepository<br/>(讀取操作)"]
+        end
+
+        subgraph SRP["單一職責 (SRP)"]
+            CreateHandler["CreateHandler"]
+            UpdateHandler["UpdateHandler"]
+            DeleteHandler["DeleteHandler"]
+        end
+
+        subgraph OCP["開放封閉 (OCP)"]
+            BaseEvent["DomainEvent"]
+            Event1["PolicyHolderCreated"]
+            Event2["PolicyHolderUpdated"]
+            Event3["PolicyAdded"]
+            BaseEvent --> Event1
+            BaseEvent --> Event2
+            BaseEvent --> Event3
+        end
+    end
+```
+
+---
+
+### CQRS 模式 (Command Query Responsibility Segregation)
+
+**CQRS** 是一種將讀取（Query）和寫入（Command）操作分離的架構模式。本專案採用 **CQRS Level 2**，即讀寫模型分離但共用資料庫。
+
+#### CQRS 三個層級
+
+| Level | 說明 | 本專案 |
+|-------|------|--------|
+| Level 1 | 程式碼層級分離 Command/Query | ✅ |
+| Level 2 | 讀寫模型分離 (Read Model / Write Model) | ✅ |
+| Level 3 | 讀寫資料庫分離 (最終一致性) | ❌ |
+
+#### 專案中的 CQRS 實作
+
+**Command Side (寫入端):**
+
+```
+POST /api/v1/policyholders
+    │
+    ▼
+CreatePolicyHolderCommand
+    │
+    ▼
+CreatePolicyHolderCommandHandler
+    │
+    ├── 1. 使用 Domain Model (PolicyHolder Aggregate)
+    ├── 2. 執行業務邏輯驗證
+    ├── 3. 產生 Domain Events
+    └── 4. 透過 Repository 持久化
+```
+
+**Query Side (讀取端):**
+
+```
+GET /api/v1/policyholders/{id}
+    │
+    ▼
+GetPolicyHolderQuery
+    │
+    ▼
+GetPolicyHolderQueryHandler
+    │
+    └── 直接回傳 Read Model (PolicyHolderReadModel)
+        無需載入完整 Aggregate
+```
+
+#### Command 與 Query 的差異
+
+```java
+// Command：改變系統狀態，不回傳查詢結果
+public record CreatePolicyHolderCommand(
+    String nationalId,
+    String name,
+    String gender,
+    LocalDate birthDate,
+    String mobilePhone,
+    String email,
+    AddressData address
+) {}
+
+// Command Handler：執行業務邏輯
+@Service
+public class CreatePolicyHolderCommandHandler {
+    public PolicyHolderReadModel handle(CreatePolicyHolderCommand command) {
+        // 1. 驗證業務規則
+        // 2. 建立 Aggregate
+        // 3. 持久化
+        // 4. 發布事件
+        // 5. 回傳 Read Model
+    }
+}
+
+// Query：只讀取資料，不改變系統狀態
+public record GetPolicyHolderQuery(String policyHolderId) {}
+
+// Query Handler：單純讀取
+@Service
+public class GetPolicyHolderQueryHandler {
+    public Optional<PolicyHolderReadModel> handle(GetPolicyHolderQuery query) {
+        // 直接從 Repository 讀取並轉換為 Read Model
+    }
+}
+```
+
+#### Read Model 設計
+
+```java
+// Read Model：為查詢最佳化的 DTO
+public class PolicyHolderReadModel {
+    private String id;
+    private String nationalId;
+    private String name;
+    private String maskedNationalId;  // 預先計算的遮罩值
+    private String fullAddress;        // 預先組合的完整地址
+    private int policyCount;           // 預先計算的保單數量
+    // ... 為顯示最佳化的欄位
+}
+
+// Write Model：Domain Aggregate
+public class PolicyHolder {
+    private PolicyHolderId id;
+    private NationalId nationalId;     // Value Object，含驗證邏輯
+    private PersonalInfo personalInfo; // Value Object
+    private ContactInfo contactInfo;   // Value Object
+    private Address address;           // Value Object
+    private List<Policy> policies;     // Entity Collection
+    private List<DomainEvent> events;  // 領域事件
+    // ... 完整的業務邏輯
+}
+```
+
+#### CQRS 架構優勢
+
+| 優勢 | 說明 |
+|------|------|
+| **效能優化** | 讀取可針對查詢最佳化，不受寫入模型限制 |
+| **擴展性** | 讀寫可獨立擴展 |
+| **簡化複雜度** | 寫入處理業務邏輯，讀取單純回傳資料 |
+| **可測試性** | Command/Query Handler 可獨立測試 |
+
+```mermaid
+graph LR
+    subgraph "CQRS Level 2"
+        subgraph Command["Command Side"]
+            C1["Command"]
+            C2["Command Handler"]
+            C3["Domain Model"]
+            C4["Repository"]
+            C1 --> C2 --> C3 --> C4
+        end
+
+        subgraph Query["Query Side"]
+            Q1["Query"]
+            Q2["Query Handler"]
+            Q3["Read Model"]
+            Q4["Query Repository"]
+            Q1 --> Q2 --> Q3
+            Q4 --> Q2
+        end
+
+        DB[(Database)]
+        C4 --> DB
+        Q4 --> DB
+    end
+```
+
+---
+
+### Event Store 模式
+
+**Event Store** 是一種將領域事件持久化的模式，用於記錄系統中所有狀態變化的歷史。
+
+#### Event Store 的目的
+
+| 用途 | 說明 |
+|------|------|
+| **審計追蹤** | 完整記錄所有業務操作的歷史 |
+| **事件溯源** | 可重建任意時間點的系統狀態 |
+| **事件驅動** | 支援非同步事件處理 |
+| **除錯分析** | 追蹤問題發生的完整脈絡 |
+
+#### 專案中的 Event Store 實作
+
+**領域事件定義:**
+
+```java
+public abstract class DomainEvent {
+    private final String eventId;         // 事件唯一識別碼
+    private final String aggregateId;     // 聚合根 ID
+    private final LocalDateTime occurredOn; // 發生時間
+
+    public abstract String getEventType();
+}
+
+// 具體事件
+public class PolicyHolderCreated extends DomainEvent {
+    private final String policyHolderId;
+    private final String nationalId;
+    private final String name;
+    private final String gender;
+    private final LocalDate birthDate;
+    private final String mobilePhone;
+    private final String email;
+    private final String fullAddress;
+}
+
+public class PolicyHolderUpdated extends DomainEvent {
+    private final PolicyHolder updatedPolicyHolder;
+}
+
+public class PolicyAdded extends DomainEvent {
+    private final String policyHolderId;
+    private final Policy policy;
+}
+```
+
+**Event Store 持久化:**
+
+```java
+@Entity
+@Table(name = "domain_events")
+public class DomainEventJpaEntity {
+    @Id
+    private String eventId;
+
+    private String aggregateId;
+    private String aggregateType;
+    private String eventType;
+
+    @Lob
+    private String eventData;    // JSON 序列化的事件資料
+
+    private LocalDateTime occurredOn;
+    private boolean published;
+    private LocalDateTime publishedAt;
+}
+```
+
+**事件發布流程:**
+
+```java
+@Component
+public class DomainEventPublisherAdapter implements DomainEventPublisher {
+    private final EventStore eventStore;
+    private final ApplicationEventPublisher springEventPublisher;
+
+    @Override
+    @Transactional
+    public void publish(DomainEvent event) {
+        // 1. 先持久化到 Event Store
+        eventStore.save(event);
+
+        // 2. 再發布到 Spring Event Bus
+        springEventPublisher.publishEvent(event);
+    }
+
+    @Override
+    public void publishAll(List<DomainEvent> events) {
+        events.forEach(this::publish);
+    }
+}
+```
+
+#### Event Store 查詢能力
+
+```java
+public interface EventStore {
+    // 儲存事件
+    void save(DomainEvent event);
+    void saveAll(List<DomainEvent> events);
+
+    // 查詢事件
+    List<DomainEvent> findByAggregateId(String aggregateId);
+    List<DomainEvent> findByEventType(String eventType);
+    List<DomainEvent> findByTimeRange(LocalDateTime start, LocalDateTime end);
+}
+```
+
+#### Event Store 資料範例
+
+```json
+{
+  "eventId": "550e8400-e29b-41d4-a716-446655440000",
+  "aggregateId": "PH0000000001",
+  "aggregateType": "PolicyHolder",
+  "eventType": "PolicyHolderCreated",
+  "eventData": {
+    "policyHolderId": "PH0000000001",
+    "nationalId": "A123456789",
+    "name": "王小明",
+    "gender": "MALE",
+    "birthDate": "1990-01-15",
+    "mobilePhone": "0912345678",
+    "email": "wang@example.com",
+    "fullAddress": "10001 台北市信義區測試路123號"
+  },
+  "occurredOn": "2024-01-15T10:30:00",
+  "published": true,
+  "publishedAt": "2024-01-15T10:30:01"
+}
+```
+
+#### Event Store 架構圖
+
+```mermaid
+sequenceDiagram
+    autonumber
+    participant Handler as Command Handler
+    participant Aggregate as PolicyHolder
+    participant EventPub as Event Publisher
+    participant EventStore as Event Store
+    participant DB as Database
+    participant EventBus as Spring Event Bus
+    participant Listener as Event Listener
+
+    Handler->>Aggregate: 執行業務操作
+    Aggregate->>Aggregate: 產生 Domain Event
+    Aggregate-->>Handler: 回傳含事件的 Aggregate
+
+    Handler->>EventPub: publishAll(events)
+    EventPub->>EventStore: save(event)
+    EventStore->>DB: INSERT INTO domain_events
+    DB-->>EventStore: success
+    EventStore-->>EventPub: saved
+
+    EventPub->>EventBus: publishEvent(event)
+    EventBus->>Listener: onEvent(event)
+    Listener-->>EventBus: handled
+```
+
+---
+
+### BDD 測試方法論 (Behavior-Driven Development)
+
+**BDD** 是一種以行為為導向的開發方法論，強調使用自然語言描述系統行為，讓開發人員、測試人員和業務人員能夠共同理解需求。
+
+#### BDD 核心概念
+
+| 概念 | 說明 |
+|------|------|
+| **Given** | 前置條件：系統的初始狀態 |
+| **When** | 觸發動作：執行的操作 |
+| **Then** | 預期結果：驗證的行為 |
+
+#### 專案中的 BDD 測試風格
+
+**Domain Layer 測試:**
+
+```java
+@DisplayName("PolicyHolder Tests")
+class PolicyHolderTest {
+
+    @Nested
+    @DisplayName("建立保戶")
+    class CreatePolicyHolder {
+
+        @Test
+        @DisplayName("should create policy holder with valid data")
+        void shouldCreatePolicyHolderWithValidData() {
+            // Given: 有效的保戶資料
+            NationalId nationalId = NationalId.of("A123456789");
+            PersonalInfo personalInfo = PersonalInfo.of("王小明", Gender.MALE,
+                LocalDate.of(1990, 1, 15));
+            ContactInfo contactInfo = ContactInfo.of("0912345678", "wang@example.com");
+            Address address = Address.of("10001", "台北市", "信義區", "測試路123號");
+
+            // When: 建立保戶
+            PolicyHolder policyHolder = PolicyHolder.create(
+                nationalId, personalInfo, contactInfo, address
+            );
+
+            // Then: 保戶應該被正確建立
+            assertNotNull(policyHolder.getId());
+            assertEquals("A123456789", policyHolder.getNationalId().getValue());
+            assertEquals(PolicyHolderStatus.ACTIVE, policyHolder.getStatus());
+
+            // And: 應該產生建立事件
+            List<DomainEvent> events = policyHolder.getDomainEvents();
+            assertEquals(1, events.size());
+            assertInstanceOf(PolicyHolderCreated.class, events.get(0));
+        }
+
+        @Test
+        @DisplayName("should reject invalid national ID")
+        void shouldRejectInvalidNationalId() {
+            // Given: 無效的身分證字號
+            String invalidNationalId = "A123456780";  // 檢查碼錯誤
+
+            // When & Then: 應該拋出驗證例外
+            assertThrows(InvalidNationalIdException.class, () ->
+                NationalId.of(invalidNationalId)
+            );
+        }
+    }
+
+    @Nested
+    @DisplayName("新增保單")
+    class AddPolicy {
+
+        @Test
+        @DisplayName("should add policy to active policy holder")
+        void shouldAddPolicyToActivePolicyHolder() {
+            // Given: 一個活動中的保戶
+            PolicyHolder policyHolder = createActivePolicyHolder();
+            policyHolder.clearEvents();
+
+            // And: 一份有效的保單
+            Policy policy = Policy.create(
+                PolicyType.LIFE,
+                Money.twd(10000),
+                Money.twd(1000000),
+                LocalDate.now(),
+                LocalDate.now().plusYears(1)
+            );
+
+            // When: 新增保單
+            policyHolder.addPolicy(policy);
+
+            // Then: 保單應該被加入
+            assertEquals(1, policyHolder.getPolicies().size());
+
+            // And: 應該產生 PolicyAdded 事件
+            List<DomainEvent> events = policyHolder.getDomainEvents();
+            assertEquals(1, events.size());
+            assertInstanceOf(PolicyAdded.class, events.get(0));
+        }
+
+        @Test
+        @DisplayName("should not add policy to inactive policy holder")
+        void shouldNotAddPolicyToInactivePolicyHolder() {
+            // Given: 一個停用的保戶
+            PolicyHolder policyHolder = createInactivePolicyHolder();
+            Policy policy = createValidPolicy();
+
+            // When & Then: 應該拋出業務例外
+            assertThrows(PolicyHolderNotActiveException.class, () ->
+                policyHolder.addPolicy(policy)
+            );
+        }
+    }
+}
+```
+
+**Application Layer 測試:**
+
+```java
+@DisplayName("CreatePolicyHolderCommandHandler Tests")
+class CreatePolicyHolderCommandHandlerTest {
+
+    @Nested
+    @DisplayName("成功建立保戶")
+    class SuccessfulCreation {
+
+        @Test
+        @DisplayName("should create policy holder and publish events")
+        void shouldCreatePolicyHolderAndPublishEvents() {
+            // Given: 有效的建立命令
+            CreatePolicyHolderCommand command = new CreatePolicyHolderCommand(
+                "A123456789", "王小明", "MALE",
+                LocalDate.of(1990, 1, 15),
+                "0912345678", "wang@example.com",
+                new AddressData("10001", "台北市", "信義區", "測試路123號")
+            );
+
+            // And: Repository 回傳身分證字號不存在
+            when(repository.existsByNationalId(any())).thenReturn(false);
+            when(repository.save(any())).thenAnswer(i -> i.getArgument(0));
+
+            // When: 執行建立命令
+            PolicyHolderReadModel result = handler.handle(command);
+
+            // Then: 保戶應該被儲存
+            verify(repository).save(any(PolicyHolder.class));
+
+            // And: 事件應該被發布
+            verify(eventPublisher).publishAll(anyList());
+
+            // And: 回傳正確的 Read Model
+            assertNotNull(result.getId());
+            assertEquals("王小明", result.getName());
+        }
+    }
+
+    @Nested
+    @DisplayName("建立失敗情況")
+    class FailureScenarios {
+
+        @Test
+        @DisplayName("should reject duplicate national ID")
+        void shouldRejectDuplicateNationalId() {
+            // Given: 身分證字號已存在
+            when(repository.existsByNationalId(any())).thenReturn(true);
+
+            // When & Then: 應該拋出重複例外
+            assertThrows(DuplicateNationalIdException.class, () ->
+                handler.handle(validCommand)
+            );
+
+            // And: 不應該儲存或發布事件
+            verify(repository, never()).save(any());
+            verify(eventPublisher, never()).publishAll(any());
+        }
+    }
+}
+```
+
+**Integration Test (BDD 風格):**
+
+```java
+@SpringBootTest
+@AutoConfigureMockMvc
+@DisplayName("PolicyHolder API Integration Tests")
+class PolicyHolderIntegrationTest {
+
+    @Nested
+    @DisplayName("新增保戶 API")
+    class CreatePolicyHolderApi {
+
+        @Test
+        @DisplayName("完整的保戶建立流程")
+        void completePolicyHolderCreationFlow() throws Exception {
+            // Given: 一個有效的建立保戶請求
+            String request = """
+                {
+                    "nationalId": "A123456789",
+                    "name": "王小明",
+                    "gender": "MALE",
+                    "birthDate": "1990-01-15",
+                    "mobilePhone": "0912345678",
+                    "email": "wang@example.com",
+                    "address": {
+                        "zipCode": "10001",
+                        "city": "台北市",
+                        "district": "信義區",
+                        "street": "測試路123號"
+                    }
+                }
+                """;
+
+            // When: 發送 POST 請求
+            MvcResult result = mockMvc.perform(post("/api/v1/policyholders")
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content(request))
+                // Then: 應該回傳 201 Created
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.success").value(true))
+                .andExpect(jsonPath("$.data.id").exists())
+                .andExpect(jsonPath("$.data.name").value("王小明"))
+                .andReturn();
+
+            // And: 應該可以查詢到該保戶
+            String policyHolderId = JsonPath.read(
+                result.getResponse().getContentAsString(),
+                "$.data.id"
+            );
+
+            mockMvc.perform(get("/api/v1/policyholders/{id}", policyHolderId))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.nationalId").value("A123456789"));
+
+            // And: 事件應該被記錄到 Event Store
+            List<DomainEventJpaEntity> events = eventRepository
+                .findByAggregateIdOrderByOccurredOnAsc(policyHolderId);
+            assertEquals(1, events.size());
+            assertEquals("PolicyHolderCreated", events.get(0).getEventType());
+        }
+    }
+}
+```
+
+#### 測試命名慣例
+
+本專案採用描述性的測試命名，讓測試本身成為文件：
+
+```java
+// 使用 @DisplayName 提供中文描述
+@DisplayName("保戶管理功能測試")
+class PolicyHolderTest {
+
+    // 使用巢狀類別組織相關測試
+    @Nested
+    @DisplayName("建立保戶")
+    class CreatePolicyHolder {
+
+        // 測試方法命名：should + 預期行為 + 條件
+        @Test
+        @DisplayName("應該成功建立具有有效資料的保戶")
+        void shouldCreatePolicyHolderWithValidData() { }
+
+        @Test
+        @DisplayName("應該拒絕無效的身分證字號")
+        void shouldRejectInvalidNationalId() { }
+
+        @Test
+        @DisplayName("應該拒絕重複的身分證字號")
+        void shouldRejectDuplicateNationalId() { }
+    }
+}
+```
+
+#### BDD 測試金字塔
+
+```mermaid
+graph TB
+    subgraph "測試金字塔"
+        E2E["🔺 End-to-End Tests<br/>整合測試 (16)"]
+        Integration["🔸 Integration Tests<br/>API 測試 (40)"]
+        Unit["🟢 Unit Tests<br/>單元測試 (493)"]
+    end
+
+    E2E --> Integration
+    Integration --> Unit
+
+    style E2E fill:#ff6b6b
+    style Integration fill:#feca57
+    style Unit fill:#1dd1a1
+```
 
 ---
 
@@ -1074,17 +1935,71 @@ gradle bootRun
 
 | 類型 | 數量 |
 |------|------|
-| 單元測試 | 177 |
+| 單元測試 | 517 |
 | 整合測試 | 16 |
 | 架構測試 | 16 |
-| **總計** | **209** |
+| **總計** | **549** |
 
 ### 覆蓋率
 
 | 指標 | 數值 |
 |------|------|
-| 指令覆蓋率 | 81% |
-| 分支覆蓋率 | 65% |
+| 指令覆蓋率 | 95% |
+| 分支覆蓋率 | 83% |
+
+### 測試案例詳細說明
+
+#### Domain Layer 測試
+
+| 測試類別 | 說明 | 測試數量 |
+|----------|------|----------|
+| `PolicyHolderTest` | 保戶聚合根測試 (建立、更新、停用) | 12 |
+| `PolicyTest` | 保單實體測試 (建立、驗證、狀態管理) | 10 |
+| `NationalIdTest` | 身分證字號值物件測試 (格式驗證、檢查碼) | 11 |
+| `MoneyTest` | 金額值物件測試 (運算、驗證、比較) | 15 |
+| `PolicyIdTest` | 保單編號值物件測試 (格式、產生、驗證) | 16 |
+| `AddressTest` | 地址值物件測試 | 5 |
+| `ContactInfoTest` | 聯絡資訊值物件測試 | 5 |
+| `PersonalInfoTest` | 個人資訊值物件測試 | 5 |
+| `PolicyHolderIdTest` | 保戶編號值物件測試 | 9 |
+| `PolicyHolderDomainServiceTest` | 領域服務測試 | 8 |
+| `DomainEventTest` | 領域事件測試 (建立、更新、刪除、新增保單) | 12 |
+| `DomainExceptionTest` | 領域例外測試 (階層、錯誤碼) | 14 |
+
+#### Application Layer 測試
+
+| 測試類別 | 說明 | 測試數量 |
+|----------|------|----------|
+| `CreatePolicyHolderCommandHandlerTest` | 建立保戶命令處理器測試 | 8 |
+| `UpdatePolicyHolderCommandHandlerTest` | 更新保戶命令處理器測試 | 6 |
+| `DeletePolicyHolderCommandHandlerTest` | 刪除保戶命令處理器測試 | 5 |
+| `AddPolicyCommandHandlerTest` | 新增保單命令處理器測試 | 6 |
+| `GetPolicyHolderQueryHandlerTest` | 查詢保戶處理器測試 | 5 |
+| `GetPolicyQueryHandlerTest` | 查詢保單處理器測試 | 8 |
+| `GetPolicyHolderPoliciesQueryHandlerTest` | 查詢保單列表處理器測試 | 6 |
+| `SearchPolicyHoldersQueryHandlerTest` | 搜尋保戶處理器測試 | 5 |
+
+#### Infrastructure Layer 測試
+
+| 測試類別 | 說明 | 測試數量 |
+|----------|------|----------|
+| `PolicyHolderControllerCreateTest` | 建立保戶 API 測試 | 8 |
+| `PolicyHolderControllerQueryTest` | 查詢保戶 API 測試 | 10 |
+| `PolicyHolderControllerUpdateTest` | 更新保戶 API 測試 | 6 |
+| `PolicyHolderControllerDeleteTest` | 刪除保戶 API 測試 | 5 |
+| `PolicyControllerAddTest` | 新增保單 API 測試 | 6 |
+| `PolicyControllerQueryTest` | 查詢保單 API 測試 | 5 |
+| `PolicyHolderMapperTest` | 保戶 Mapper 測試 (領域模型 ↔ JPA 實體) | 12 |
+| `PolicyMapperTest` | 保單 Mapper 測試 (領域模型 ↔ JPA 實體) | 10 |
+| `GlobalExceptionHandlerTest` | 全域例外處理器測試 | 12 |
+| `PolicyHolderRepositoryAdapterTest` | Repository 適配器測試 | 12 |
+
+#### 其他測試
+
+| 測試類別 | 說明 | 測試數量 |
+|----------|------|----------|
+| `PolicyHolderIntegrationTest` | 端到端整合測試 | 16 |
+| `ArchitectureTest` | ArchUnit 架構驗證測試 | 16 |
 
 ### 執行測試
 
@@ -1092,11 +2007,22 @@ gradle bootRun
 # 執行所有測試
 gradle test
 
+# 執行特定層的測試
+gradle test --tests "*domain*"
+gradle test --tests "*application*"
+gradle test --tests "*infrastructure*"
+
 # 執行架構測試
 gradle test --tests "*ArchitectureTest*"
 
+# 執行整合測試
+gradle test --tests "*IntegrationTest*"
+
 # 產生覆蓋率報告
 gradle test jacocoTestReport
+
+# 查看覆蓋率報告
+open build/reports/jacoco/test/html/index.html
 ```
 
 ---
