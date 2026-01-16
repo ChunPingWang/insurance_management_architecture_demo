@@ -1947,59 +1947,279 @@ gradle bootRun
 | 指令覆蓋率 | 95% |
 | 分支覆蓋率 | 83% |
 
-### 測試案例詳細說明
+### BDD 測試案例與測試對象映射
+
+以下詳細列出每個 BDD 測試案例所測試的程式碼檔案，以及所驗證的設計原則。
 
 #### Domain Layer 測試
 
-| 測試類別 | 說明 | 測試數量 |
-|----------|------|----------|
-| `PolicyHolderTest` | 保戶聚合根測試 (建立、更新、停用) | 12 |
-| `PolicyTest` | 保單實體測試 (建立、驗證、狀態管理) | 10 |
-| `NationalIdTest` | 身分證字號值物件測試 (格式驗證、檢查碼) | 11 |
-| `MoneyTest` | 金額值物件測試 (運算、驗證、比較) | 15 |
-| `PolicyIdTest` | 保單編號值物件測試 (格式、產生、驗證) | 16 |
-| `AddressTest` | 地址值物件測試 | 5 |
-| `ContactInfoTest` | 聯絡資訊值物件測試 | 5 |
-| `PersonalInfoTest` | 個人資訊值物件測試 | 5 |
-| `PolicyHolderIdTest` | 保戶編號值物件測試 | 9 |
-| `PolicyHolderDomainServiceTest` | 領域服務測試 | 8 |
-| `DomainEventTest` | 領域事件測試 (建立、更新、刪除、新增保單) | 12 |
-| `DomainExceptionTest` | 領域例外測試 (階層、錯誤碼) | 14 |
+| 測試類別 | 測試對象 | 設計原則 |
+|----------|----------|----------|
+| `PolicyHolderTest` | `PolicyHolder.java` | **DDD Aggregate Root**, **SRP** |
+| `PolicyTest` | `Policy.java` | **DDD Entity**, **SRP** |
+| `NationalIdTest` | `NationalId.java` | **DDD Value Object**, **SRP** |
+| `MoneyTest` | `Money.java` | **DDD Value Object**, **SRP** |
+| `PolicyIdTest` | `PolicyId.java` | **DDD Value Object**, **SRP** |
+| `AddressTest` | `Address.java` | **DDD Value Object**, **SRP** |
+| `ContactInfoTest` | `ContactInfo.java` | **DDD Value Object**, **SRP** |
+| `PersonalInfoTest` | `PersonalInfo.java` | **DDD Value Object**, **SRP** |
+| `PolicyHolderIdTest` | `PolicyHolderId.java` | **DDD Value Object**, **SRP** |
+| `PolicyHolderDomainServiceTest` | `PolicyHolderDomainService.java` | **DDD Domain Service**, **SRP** |
+| `DomainEventTest` | `DomainEvent.java`, `PolicyHolderCreated.java`, `PolicyHolderUpdated.java`, `PolicyHolderDeleted.java`, `PolicyAdded.java` | **Event Store**, **LSP**, **OCP** |
+| `DomainExceptionTest` | `DomainException.java`, `PolicyHolderNotFoundException.java`, `PolicyHolderNotActiveException.java`, `PolicyNotFoundException.java` | **LSP**, **OCP** |
 
 #### Application Layer 測試
 
-| 測試類別 | 說明 | 測試數量 |
-|----------|------|----------|
-| `CreatePolicyHolderCommandHandlerTest` | 建立保戶命令處理器測試 | 8 |
-| `UpdatePolicyHolderCommandHandlerTest` | 更新保戶命令處理器測試 | 6 |
-| `DeletePolicyHolderCommandHandlerTest` | 刪除保戶命令處理器測試 | 5 |
-| `AddPolicyCommandHandlerTest` | 新增保單命令處理器測試 | 6 |
-| `GetPolicyHolderQueryHandlerTest` | 查詢保戶處理器測試 | 5 |
-| `GetPolicyQueryHandlerTest` | 查詢保單處理器測試 | 8 |
-| `GetPolicyHolderPoliciesQueryHandlerTest` | 查詢保單列表處理器測試 | 6 |
-| `SearchPolicyHoldersQueryHandlerTest` | 搜尋保戶處理器測試 | 5 |
+| 測試類別 | 測試對象 | 設計原則 |
+|----------|----------|----------|
+| `CreatePolicyHolderCommandHandlerTest` | `CreatePolicyHolderCommandHandler.java`, `CreatePolicyHolderCommand.java` | **CQRS Command**, **SRP**, **DIP** |
+| `UpdatePolicyHolderCommandHandlerTest` | `UpdatePolicyHolderCommandHandler.java`, `UpdatePolicyHolderCommand.java` | **CQRS Command**, **SRP**, **DIP** |
+| `DeletePolicyHolderCommandHandlerTest` | `DeletePolicyHolderCommandHandler.java`, `DeletePolicyHolderCommand.java` | **CQRS Command**, **SRP**, **DIP** |
+| `AddPolicyCommandHandlerTest` | `AddPolicyCommandHandler.java`, `AddPolicyCommand.java` | **CQRS Command**, **SRP**, **DIP** |
+| `GetPolicyHolderQueryHandlerTest` | `GetPolicyHolderQueryHandler.java`, `GetPolicyHolderQuery.java` | **CQRS Query**, **SRP**, **DIP** |
+| `GetPolicyQueryHandlerTest` | `GetPolicyQueryHandler.java`, `GetPolicyQuery.java` | **CQRS Query**, **SRP**, **DIP** |
+| `GetPolicyHolderPoliciesQueryHandlerTest` | `GetPolicyHolderPoliciesQueryHandler.java`, `GetPolicyHolderPoliciesQuery.java` | **CQRS Query**, **SRP**, **DIP** |
+| `SearchPolicyHoldersQueryHandlerTest` | `SearchPolicyHoldersQueryHandler.java`, `SearchPolicyHoldersQuery.java` | **CQRS Query**, **SRP**, **DIP** |
+| `PagedResultTest` | `PagedResult.java` | **CQRS Read Model** |
+| `PolicyHolderReadModelTest` | `PolicyHolderReadModel.java` | **CQRS Read Model** |
+| `PolicyReadModelTest` | `PolicyReadModel.java` | **CQRS Read Model** |
+| `PolicyHolderListItemReadModelTest` | `PolicyHolderListItemReadModel.java` | **CQRS Read Model** |
 
 #### Infrastructure Layer 測試
 
-| 測試類別 | 說明 | 測試數量 |
-|----------|------|----------|
-| `PolicyHolderControllerCreateTest` | 建立保戶 API 測試 | 8 |
-| `PolicyHolderControllerQueryTest` | 查詢保戶 API 測試 | 10 |
-| `PolicyHolderControllerUpdateTest` | 更新保戶 API 測試 | 6 |
-| `PolicyHolderControllerDeleteTest` | 刪除保戶 API 測試 | 5 |
-| `PolicyControllerAddTest` | 新增保單 API 測試 | 6 |
-| `PolicyControllerQueryTest` | 查詢保單 API 測試 | 5 |
-| `PolicyHolderMapperTest` | 保戶 Mapper 測試 (領域模型 ↔ JPA 實體) | 12 |
-| `PolicyMapperTest` | 保單 Mapper 測試 (領域模型 ↔ JPA 實體) | 10 |
-| `GlobalExceptionHandlerTest` | 全域例外處理器測試 | 12 |
-| `PolicyHolderRepositoryAdapterTest` | Repository 適配器測試 | 12 |
+| 測試類別 | 測試對象 | 設計原則 |
+|----------|----------|----------|
+| `PolicyHolderControllerCreateTest` | `PolicyHolderController.java` (POST) | **Hexagonal Input Adapter**, **SRP** |
+| `PolicyHolderControllerQueryTest` | `PolicyHolderController.java` (GET) | **Hexagonal Input Adapter**, **SRP** |
+| `PolicyHolderControllerUpdateTest` | `PolicyHolderController.java` (PUT) | **Hexagonal Input Adapter**, **SRP** |
+| `PolicyHolderControllerDeleteTest` | `PolicyHolderController.java` (DELETE) | **Hexagonal Input Adapter**, **SRP** |
+| `PolicyControllerAddTest` | `PolicyHolderController.java` (POST policies) | **Hexagonal Input Adapter**, **SRP** |
+| `PolicyControllerQueryTest` | `PolicyHolderController.java` (GET policies) | **Hexagonal Input Adapter**, **SRP** |
+| `PolicyHolderMapperTest` | `PolicyHolderMapper.java` | **SRP**, **Data Mapper Pattern** |
+| `PolicyMapperTest` | `PolicyMapper.java` | **SRP**, **Data Mapper Pattern** |
+| `GlobalExceptionHandlerTest` | `GlobalExceptionHandler.java` | **SRP**, **Cross-Cutting Concern** |
+| `PolicyHolderRepositoryAdapterTest` | `PolicyHolderRepositoryAdapter.java`, `PolicyHolderRepository.java` (interface) | **Hexagonal Output Adapter**, **DIP**, **ISP** |
+| `DomainEventPublisherAdapterTest` | `DomainEventPublisherAdapter.java`, `DomainEventPublisher.java` (interface) | **Hexagonal Output Adapter**, **DIP**, **Event Store** |
+| `EventStoreAdapterTest` | `EventStoreAdapter.java`, `EventStore.java` (interface) | **Event Store**, **DIP** |
+| `ApiResponseTest` | `ApiResponse.java` | **SRP** |
+| `ErrorResponseTest` | `ErrorResponse.java` | **SRP** |
+| `PageResponseTest` | `PageResponse.java` | **CQRS Read Model**, **SRP** |
+| `AddressResponseTest` | `AddressResponse.java` | **SRP** |
+| `PolicyHolderResponseTest` | `PolicyHolderResponse.java` | **SRP** |
+| `PolicyResponseTest` | `PolicyResponse.java` | **SRP** |
+| `PolicyHolderListItemResponseTest` | `PolicyHolderListItemResponse.java` | **SRP** |
 
-#### 其他測試
+#### 整合與架構測試
 
-| 測試類別 | 說明 | 測試數量 |
-|----------|------|----------|
-| `PolicyHolderIntegrationTest` | 端到端整合測試 | 16 |
-| `ArchitectureTest` | ArchUnit 架構驗證測試 | 16 |
+| 測試類別 | 測試對象 | 設計原則 |
+|----------|----------|----------|
+| `PolicyHolderIntegrationTest` | 完整系統 (Controller → Handler → Repository → Database) | **End-to-End**, **Hexagonal Architecture** |
+| `ArchitectureTest` | 整體架構依賴規則 | **DIP**, **Layer Independence**, **Hexagonal Architecture** |
+
+---
+
+### 設計原則實踐對照表
+
+以下詳細標註每個設計原則在哪些程式碼中實踐。
+
+#### SOLID 原則實踐位置
+
+##### S - 單一職責原則 (Single Responsibility Principle)
+
+| 程式碼檔案 | 路徑 | 單一職責說明 |
+|------------|------|--------------|
+| `CreatePolicyHolderCommandHandler.java` | `application/commandhandler/` | 只負責建立保戶 |
+| `UpdatePolicyHolderCommandHandler.java` | `application/commandhandler/` | 只負責更新保戶 |
+| `DeletePolicyHolderCommandHandler.java` | `application/commandhandler/` | 只負責刪除保戶 |
+| `AddPolicyCommandHandler.java` | `application/commandhandler/` | 只負責新增保單 |
+| `GetPolicyHolderQueryHandler.java` | `application/queryhandler/` | 只負責查詢保戶 |
+| `SearchPolicyHoldersQueryHandler.java` | `application/queryhandler/` | 只負責搜尋保戶 |
+| `NationalId.java` | `domain/model/valueobject/` | 只負責身分證驗證邏輯 |
+| `Money.java` | `domain/model/valueobject/` | 只負責金額運算邏輯 |
+| `Address.java` | `domain/model/valueobject/` | 只負責地址相關邏輯 |
+| `PolicyHolderMapper.java` | `infrastructure/.../mapper/` | 只負責領域模型與 JPA 實體轉換 |
+| `PolicyMapper.java` | `infrastructure/.../mapper/` | 只負責保單模型與 JPA 實體轉換 |
+| `GlobalExceptionHandler.java` | `infrastructure/exception/` | 只負責全域例外處理 |
+
+##### O - 開放封閉原則 (Open/Closed Principle)
+
+| 程式碼檔案 | 路徑 | OCP 實踐說明 |
+|------------|------|--------------|
+| `DomainEvent.java` | `domain/event/` | 抽象基底類別，新事件透過繼承擴展 |
+| `PolicyHolderCreated.java` | `domain/event/` | 擴展 DomainEvent，不修改基底類別 |
+| `PolicyHolderUpdated.java` | `domain/event/` | 擴展 DomainEvent，不修改基底類別 |
+| `PolicyHolderDeleted.java` | `domain/event/` | 擴展 DomainEvent，不修改基底類別 |
+| `PolicyAdded.java` | `domain/event/` | 擴展 DomainEvent，不修改基底類別 |
+| `DomainException.java` | `domain/exception/` | 抽象例外基底類別 |
+| `PolicyHolderNotFoundException.java` | `domain/exception/` | 擴展 DomainException |
+| `PolicyHolderNotActiveException.java` | `domain/exception/` | 擴展 DomainException |
+| `CommandHandler.java` | `application/port/input/` | 泛型介面允許新 Handler 擴展 |
+| `QueryHandler.java` | `application/port/input/` | 泛型介面允許新 Handler 擴展 |
+
+##### L - 里氏替換原則 (Liskov Substitution Principle)
+
+| 程式碼檔案 | 路徑 | LSP 實踐說明 |
+|------------|------|--------------|
+| `DomainEvent.java` + 子類別 | `domain/event/` | 所有子類別可替換基底類別使用 |
+| `DomainException.java` + 子類別 | `domain/exception/` | 所有子類別可替換基底類別使用 |
+| `PolicyHolderRepository.java` | `application/port/output/` | 實作類別可替換介面使用 |
+| `PolicyHolderRepositoryAdapter.java` | `infrastructure/.../adapter/` | 完全實作 Repository 介面契約 |
+| `DomainEventPublisher.java` | `application/port/output/` | 介面定義發布契約 |
+| `DomainEventPublisherAdapter.java` | `infrastructure/.../event/` | 完全實作 Publisher 介面契約 |
+
+##### I - 介面隔離原則 (Interface Segregation Principle)
+
+| 程式碼檔案 | 路徑 | ISP 實踐說明 |
+|------------|------|--------------|
+| `CommandHandler.java` | `application/port/input/` | 只有 1 個方法: `handle(C)` |
+| `QueryHandler.java` | `application/port/input/` | 只有 1 個方法: `handle(Q)` |
+| `PolicyHolderRepository.java` | `application/port/output/` | 寫入端介面: `save`, `findById`, `existsByNationalId` |
+| `PolicyHolderQueryRepository.java` | `application/port/output/` | 讀取端介面: `findAll`, `searchByName`, `findByStatus` |
+| `DomainEventPublisher.java` | `application/port/output/` | 只有 2 個方法: `publish`, `publishAll` |
+| `EventStore.java` | `application/port/output/` | 事件儲存介面: `save`, `saveAll`, `findByAggregateId` |
+
+##### D - 依賴反轉原則 (Dependency Inversion Principle)
+
+| 高層模組 | 抽象介面 | 低層實作 |
+|----------|----------|----------|
+| `CreatePolicyHolderCommandHandler.java` | `PolicyHolderRepository.java` | `PolicyHolderRepositoryAdapter.java` |
+| `CreatePolicyHolderCommandHandler.java` | `DomainEventPublisher.java` | `DomainEventPublisherAdapter.java` |
+| `UpdatePolicyHolderCommandHandler.java` | `PolicyHolderRepository.java` | `PolicyHolderRepositoryAdapter.java` |
+| `DeletePolicyHolderCommandHandler.java` | `PolicyHolderRepository.java` | `PolicyHolderRepositoryAdapter.java` |
+| `AddPolicyCommandHandler.java` | `PolicyHolderRepository.java` | `PolicyHolderRepositoryAdapter.java` |
+| `GetPolicyHolderQueryHandler.java` | `PolicyHolderRepository.java` | `PolicyHolderRepositoryAdapter.java` |
+| `SearchPolicyHoldersQueryHandler.java` | `PolicyHolderQueryRepository.java` | `PolicyHolderQueryRepositoryAdapter.java` |
+| `DomainEventPublisherAdapter.java` | `EventStore.java` | `EventStoreAdapter.java` |
+
+---
+
+#### CQRS 模式實踐位置
+
+##### Command Side (寫入端)
+
+| 類型 | 程式碼檔案 | 說明 |
+|------|------------|------|
+| **Command** | `CreatePolicyHolderCommand.java` | 建立保戶命令 DTO |
+| **Command** | `UpdatePolicyHolderCommand.java` | 更新保戶命令 DTO |
+| **Command** | `DeletePolicyHolderCommand.java` | 刪除保戶命令 DTO |
+| **Command** | `AddPolicyCommand.java` | 新增保單命令 DTO |
+| **Command Handler** | `CreatePolicyHolderCommandHandler.java` | 處理建立保戶命令 |
+| **Command Handler** | `UpdatePolicyHolderCommandHandler.java` | 處理更新保戶命令 |
+| **Command Handler** | `DeletePolicyHolderCommandHandler.java` | 處理刪除保戶命令 |
+| **Command Handler** | `AddPolicyCommandHandler.java` | 處理新增保單命令 |
+| **Write Repository** | `PolicyHolderRepository.java` | 寫入端 Repository 介面 |
+| **Write Model** | `PolicyHolder.java` | 寫入端 Aggregate Root |
+| **Write Model** | `Policy.java` | 寫入端 Entity |
+
+##### Query Side (讀取端)
+
+| 類型 | 程式碼檔案 | 說明 |
+|------|------------|------|
+| **Query** | `GetPolicyHolderQuery.java` | 查詢保戶 Query DTO |
+| **Query** | `GetPolicyHolderPoliciesQuery.java` | 查詢保單列表 Query DTO |
+| **Query** | `GetPolicyQuery.java` | 查詢單一保單 Query DTO |
+| **Query** | `SearchPolicyHoldersQuery.java` | 搜尋保戶 Query DTO |
+| **Query Handler** | `GetPolicyHolderQueryHandler.java` | 處理查詢保戶 |
+| **Query Handler** | `GetPolicyHolderPoliciesQueryHandler.java` | 處理查詢保單列表 |
+| **Query Handler** | `GetPolicyQueryHandler.java` | 處理查詢單一保單 |
+| **Query Handler** | `SearchPolicyHoldersQueryHandler.java` | 處理搜尋保戶 |
+| **Read Repository** | `PolicyHolderQueryRepository.java` | 讀取端 Repository 介面 |
+| **Read Model** | `PolicyHolderReadModel.java` | 保戶讀取模型 |
+| **Read Model** | `PolicyReadModel.java` | 保單讀取模型 |
+| **Read Model** | `PolicyHolderListItemReadModel.java` | 保戶列表項目讀取模型 |
+| **Read Model** | `PagedResult.java` | 分頁結果讀取模型 |
+
+---
+
+#### Event Store 模式實踐位置
+
+| 類型 | 程式碼檔案 | 說明 |
+|------|------------|------|
+| **Domain Event Base** | `DomainEvent.java` | 領域事件抽象基底類別 |
+| **Domain Event** | `PolicyHolderCreated.java` | 保戶建立事件 |
+| **Domain Event** | `PolicyHolderUpdated.java` | 保戶更新事件 |
+| **Domain Event** | `PolicyHolderDeleted.java` | 保戶刪除事件 |
+| **Domain Event** | `PolicyAdded.java` | 保單新增事件 |
+| **Event Store Port** | `EventStore.java` | 事件儲存介面 (Output Port) |
+| **Event Store Adapter** | `EventStoreAdapter.java` | 事件儲存實作 |
+| **Event Publisher Port** | `DomainEventPublisher.java` | 事件發布介面 (Output Port) |
+| **Event Publisher Adapter** | `DomainEventPublisherAdapter.java` | 事件發布實作 |
+| **Event JPA Entity** | `DomainEventJpaEntity.java` | 事件持久化實體 |
+| **Event Repository** | `DomainEventJpaRepository.java` | 事件 JPA Repository |
+
+---
+
+#### 六角形架構實踐位置
+
+##### Input Adapters (輸入適配器)
+
+| 程式碼檔案 | 路徑 | 說明 |
+|------------|------|------|
+| `PolicyHolderController.java` | `infrastructure/adapter/input/rest/` | REST API 輸入適配器 |
+| `CreatePolicyHolderRequest.java` | `infrastructure/.../request/` | 建立保戶請求 DTO |
+| `UpdatePolicyHolderRequest.java` | `infrastructure/.../request/` | 更新保戶請求 DTO |
+| `AddPolicyRequest.java` | `infrastructure/.../request/` | 新增保單請求 DTO |
+| `AddressRequest.java` | `infrastructure/.../request/` | 地址請求 DTO |
+
+##### Input Ports (輸入端口)
+
+| 程式碼檔案 | 路徑 | 說明 |
+|------------|------|------|
+| `CommandHandler.java` | `application/port/input/` | 命令處理器介面 |
+| `QueryHandler.java` | `application/port/input/` | 查詢處理器介面 |
+
+##### Output Ports (輸出端口)
+
+| 程式碼檔案 | 路徑 | 說明 |
+|------------|------|------|
+| `PolicyHolderRepository.java` | `application/port/output/` | 保戶 Repository 介面 |
+| `PolicyHolderQueryRepository.java` | `application/port/output/` | 保戶查詢 Repository 介面 |
+| `DomainEventPublisher.java` | `application/port/output/` | 領域事件發布者介面 |
+| `EventStore.java` | `application/port/output/` | 事件儲存介面 |
+
+##### Output Adapters (輸出適配器)
+
+| 程式碼檔案 | 路徑 | 說明 |
+|------------|------|------|
+| `PolicyHolderRepositoryAdapter.java` | `infrastructure/.../persistence/adapter/` | 保戶 Repository 實作 |
+| `PolicyHolderQueryRepositoryAdapter.java` | `infrastructure/.../persistence/adapter/` | 保戶查詢 Repository 實作 |
+| `DomainEventPublisherAdapter.java` | `infrastructure/.../event/` | 領域事件發布者實作 |
+| `EventStoreAdapter.java` | `infrastructure/.../event/` | 事件儲存實作 |
+| `PolicyHolderMapper.java` | `infrastructure/.../persistence/mapper/` | 保戶模型轉換器 |
+| `PolicyMapper.java` | `infrastructure/.../persistence/mapper/` | 保單模型轉換器 |
+
+---
+
+#### DDD 戰術設計模式實踐位置
+
+| 模式 | 程式碼檔案 | 說明 |
+|------|------------|------|
+| **Aggregate Root** | `PolicyHolder.java` | 保戶聚合根，管理一致性邊界 |
+| **Entity** | `Policy.java` | 保單實體，具有唯一識別 |
+| **Value Object** | `PolicyHolderId.java` | 保戶編號值物件 |
+| **Value Object** | `PolicyId.java` | 保單編號值物件 |
+| **Value Object** | `NationalId.java` | 身分證字號值物件 |
+| **Value Object** | `PersonalInfo.java` | 個人資訊值物件 |
+| **Value Object** | `ContactInfo.java` | 聯絡資訊值物件 |
+| **Value Object** | `Address.java` | 地址值物件 |
+| **Value Object** | `Money.java` | 金額值物件 |
+| **Domain Service** | `PolicyHolderDomainService.java` | 跨聚合業務邏輯 |
+| **Domain Event** | `PolicyHolderCreated.java` 等 | 領域事件 |
+| **Repository** | `PolicyHolderRepository.java` | 聚合儲存介面 |
+| **Factory** | `PolicyHolder.create()` | 工廠方法模式 |
+| **Factory** | `Policy.create()` | 工廠方法模式 |
+
+---
+
+### 測試案例分類統計
+
+| 層級 | 測試數量 | 測試對象數量 |
+|------|----------|--------------|
+| Domain Layer | 122 | 12 個檔案 |
+| Application Layer | 93 | 16 個檔案 |
+| Infrastructure Layer | 318 | 24 個檔案 |
+| Integration | 16 | 完整系統 |
+| **總計** | **549** | **52+ 個檔案** |
 
 ### 執行測試
 
